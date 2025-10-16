@@ -1,0 +1,29 @@
+# Ignore large data and auto-generated outputs
+data/
+aligned/
+trimmed/
+freyja_variants/
+freyja_demix/
+logs/
+reference/
+env/
+samples.txt
+
+# Ignore system & temp files
+*.log
+*.out
+*.err
+*.tmp
+*.tsv
+*.csv
+*.fastq*
+*.bam
+*.sam
+*.vcf
+.DS_Store
+*.swp
+
+# Keep scripts and configs
+!scripts/
+!README.md
+
