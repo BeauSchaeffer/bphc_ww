@@ -24,6 +24,6 @@ samples.txt
 
 # retain select files
 !scripts/
-reference/
+!reference/
 !README.md
 
