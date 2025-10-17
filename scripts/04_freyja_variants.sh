@@ -6,28 +6,27 @@
 #SBATCH --job-name=freyja_variants
 #SBATCH --output=logs/freyja_vars_%A_%a.out
 #SBATCH --error=logs/freyja_vars_%A_%a.err
-#SBATCH --array=0-9   # update to match number of samples
+#SBATCH --array=0-49   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
 
-# Activate Freyja conda environment
+# load Conda and activate local environment
 source ~/.bashrc
 conda activate ./env/freyja_new
 
-# Get sample ID from samples.txt
+# generate sample ID from sample.txt and array index
 sample=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" samples.txt)
 
-# File paths
-bam="aligned/${sample}.trimmed.bam"
+# define input and output filenames and paths
 ref="reference/V4.1/SARS-CoV-2.reference.fasta"
+bam="aligned/${sample}.trimmed.bam"
+variants_tsv="freyja_variants/${sample}_variants"
+depths_tsv="freyja_variants/${sample}_depths.tsv"
 
-# Output directory and filenames
-outdir="freyja_variants"
-mkdir -p "$outdir" logs
-
-variants_tsv="${outdir}/${sample}_variants"
-depths_tsv="${outdir}/${sample}_depths.tsv"
+# make output and log directories if they don't exist
+mkdir -p freyja_variants logs
 
 echo "Running freyja variants for $sample..."
 
+# call variants with Freyja
 freyja variants \
   "$bam" \
   --ref "$ref" \

@@ -1,15 +1,14 @@
-# Ignore large data and auto-generated outputs
+# ignore data and intermediate files
 data/
 aligned/
 trimmed/
 freyja_variants/
 freyja_demix/
 logs/
-reference/
 env/
 samples.txt
 
-# Ignore system & temp files
+# ignore system & temp files
 *.log
 *.out
 *.err
@@ -23,7 +22,8 @@ samples.txt
 .DS_Store
 *.swp
 
-# Keep scripts and configs
+# retain select files
 !scripts/
+reference/
 !README.md
 

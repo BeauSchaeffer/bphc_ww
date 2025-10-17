@@ -6,35 +6,35 @@
 #SBATCH --job-name=bt2_align
 #SBATCH --output=logs/bt2_align_%A_%a.out
 #SBATCH --error=logs/bt2_align_%A_%a.err
-#SBATCH --array=0-9   # <-- Update to match number of samples in samples.txt
+#SBATCH --array=0-49   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
 
-# Load Conda environment with bowtie2 + samtools
+# load Conda and activate local environment
 source ~/.bashrc
 conda activate ./env/alignment
 
-# Get sample ID from samples.txt based on SLURM array index
+# generate sample ID from sample.txt and array index
 sample=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" samples.txt)
 
-# Define paths and filenames
+# define input and output filenames and paths
 r1="trimmed/${sample}_R1.trimmed.fastq.gz"
 r2="trimmed/${sample}_R2.trimmed.fastq.gz"
 ref="reference/SARS-CoV-2"
-
-# Output locations
 bam_out="aligned/${sample}.sorted.bam"
 log_out="logs/${sample}_bowtie2.log"
 
-# Create output directories if they don't exist
+# make output and log directories if they don't exist
 mkdir -p aligned logs
 
 echo "Aligning $sample..."
 
-# Align with Bowtie2 and process to BAM
+# align with Bowtie2 and process to BAM
+  # -bS = input SAM, output BAM
+  # -@ 4 = 4 threads to match above
 bowtie2 -x "$ref" -1 "$r1" -2 "$r2" --threads 4 2> "$log_out" \
   | samtools view -@ 4 -bS - \
   | samtools sort -@ 4 -o "$bam_out"
 
-# Index the BAM
+# Index the BAM with samtools
 samtools index "$bam_out"
 
 echo "Done with $sample"
