@@ -18,7 +18,7 @@ sample=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" samples.txt)
 # define input and output filenames and paths
 r1="trimmed/${sample}_R1.trimmed.fastq.gz"
 r2="trimmed/${sample}_R2.trimmed.fastq.gz"
-ref="reference/SARS-CoV-2"
+ref="reference/V4.1/SARS-CoV-2"
 bam_out="aligned/${sample}.sorted.bam"
 log_out="logs/${sample}_bowtie2.log"
 
