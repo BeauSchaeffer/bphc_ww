@@ -10,7 +10,7 @@
 
 # load Conda and activate local environment
 source ~/.bashrc
-conda activate ./env/ivar
+conda activate /n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/ivar
 
 # generate sample ID from sample.txt and array index
 sample=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" samples.txt)
