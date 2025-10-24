@@ -18,5 +18,4 @@ dependencies:
   # - multiqc     # for summarizing QC reports
 
 # To create this environment (using Mamba for speed and reproducibility):
-# mamba env create -f envs/env_fastp.yml \
-#   --prefix /n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/fastp
+# mamba env create -f envs/env_fastp.yml --prefix /n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/fastp
