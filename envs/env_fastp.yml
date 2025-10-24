@@ -1,0 +1,22 @@
+name: fastp
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+
+dependencies:
+  # Core read trimming and QC tool
+  - fastp=0.23.*
+
+  # Common bioinformatics dependencies
+  - python=3.10
+  - pip
+
+  # (Optional) useful helper tools
+  # - pigz        # for parallel FASTQ compression
+  # - seqtk       # for sequence format conversion
+  # - multiqc     # for summarizing QC reports
+
+# To create this environment (using Mamba for speed and reproducibility):
+# mamba env create -f envs/env_fastp.yml \
+#   --prefix /n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/fastp
