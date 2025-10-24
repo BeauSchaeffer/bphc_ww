@@ -26,4 +26,4 @@ dependencies:
   # - pigz
 
 # To create this environment:
-# conda env create -f envs/env_freyja.yml
+# mamba env create -f envs/env_freyja.yml --prefix /n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/freyja
