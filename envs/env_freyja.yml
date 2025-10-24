@@ -1,0 +1,29 @@
+name: freyja
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+
+dependencies:
+  # Core Freyja tool for variant calling and demixing
+  - freyja=1.4.*
+
+  # Essential bioinformatics dependencies
+  - samtools=1.20
+  - python=3.10
+  - pip
+
+  # Data processing and visualization libraries (from conda-forge)
+  - tqdm         # progress bars during demixing
+  - plotly       # plotting lineage compositions
+  - pyarrow      # fast reading/writing of large TSV/Parquet tables
+
+  # (Optional) useful CLI and helper tools
+  # - pandas
+  # - numpy
+  # - bcftools
+  # - bedtools
+  # - pigz
+
+# To create this environment:
+# conda env create -f envs/env_freyja.yml
