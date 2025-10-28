@@ -26,5 +26,6 @@ testing.md
 # retain select files
 !scripts/
 !reference/
+!barcodes/
 !README.md
 
