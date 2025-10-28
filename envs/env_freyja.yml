@@ -1,29 +1,19 @@
 name: freyja
 channels:
-  - conda-forge
   - bioconda
+  - conda-forge
   - defaults
-
 dependencies:
-  # Core Freyja tool for variant calling and demixing
-  - freyja=1.4.*
-
-  # Essential bioinformatics dependencies
+  - freyja=2.0.1
+  - python=3.11        # enables Clarabel solver
   - samtools=1.20
-  - python=3.10
-  - pip
-
-  # Data processing and visualization libraries (from conda-forge)
-  - tqdm         # progress bars during demixing
-  - plotly       # plotting lineage compositions
-  - pyarrow      # fast reading/writing of large TSV/Parquet tables
-
-  # (Optional) useful CLI and helper tools
-  # - pandas
-  # - numpy
+  - tqdm
+  - plotly
+  - pyarrow
+  - pandas
+  - numpy
+  # optional tools
+  # - ivar
   # - bcftools
   # - bedtools
-  # - pigz
 
-# To create this environment:
-# mamba env create -f envs/env_freyja.yml --prefix /n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/freyja
