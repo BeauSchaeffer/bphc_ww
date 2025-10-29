@@ -12,7 +12,7 @@ source ~/.bashrc
 conda activate /n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/freyja
 
 # define input and output paths
-indir="freyja_demix"
+indir="freyja_demix/"
 outfile="freyja_aggregate/aggregated.tsv"
 
 # make output and log directories if they don't exist
