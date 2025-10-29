@@ -27,11 +27,10 @@ echo "Running freyja demix for $sample..."
 
 # deconvolution with Freyja to recover lineage relative abundances
   # --eps 0.000001 = lower threshold for dropping low abundance lineages so that RAs sum to 1
-  # --depthcutoff 10 = default 0, no exclusions; solver was failing, potentially due to low coverage regions
+  # --depthcutoff 10 = default 0, was using this to troubleshoot but have resolved with new version
 freyja demix \
   "$variants" "$depths" \
   --output "$outfile" \
-  --eps 0.000001 \
-  --depthcutoff 10
+  --eps 0.000001
 
 echo "Done with $sample"

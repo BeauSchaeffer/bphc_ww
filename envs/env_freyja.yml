@@ -17,3 +17,5 @@ dependencies:
   # - bcftools
   # - bedtools
 
+# To create this environment:
+# conda env create -f envs/env_freyja.yml
