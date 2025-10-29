@@ -1,4 +1,4 @@
-# ignore data and intermediate files
+# data and intermediate files
 data/
 metadata/
 aligned/
@@ -11,7 +11,7 @@ env/
 samples.txt
 testing.md
 
-# ignore system & temp files
+# system & temp files
 *.log
 *.out
 *.err
@@ -25,9 +25,19 @@ testing.md
 .DS_Store
 *.swp
 
-# retain select files
+# RStudio artifacts
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+.Rprofile
+.Renviron
+*.Rproj
+
+# RETAIN select files
 !scripts/
 !reference/
 !barcodes/
 !README.md
+
 
