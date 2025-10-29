@@ -9,7 +9,7 @@
 
 # load Conda and activate local environment
 source ~/.bashrc
-conda activate ./env/freyja_new
+conda activate /n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/freyja
 
 # define input and output paths
 indir="freyja_demix"

@@ -4,6 +4,7 @@ aligned/
 trimmed/
 freyja_variants/
 freyja_demix/
+freyja_aggregate/
 logs/
 env/
 samples.txt
