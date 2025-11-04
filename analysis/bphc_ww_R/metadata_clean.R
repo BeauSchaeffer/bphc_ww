@@ -45,33 +45,71 @@ metadata <- metadata |>
 
 # Sampling by neighborhood ------------------------------------------------
 
-counts <- metadata |>
+  # add year_epiweek and sort
+metadata <- metadata |>
   mutate(epiweek = epiweek(SAMPLING_DATE),
          year = year(SAMPLING_DATE),
-         year_epiweek = paste(year,epiweek,sep = "")) |>
-  mutate(year_epiweek=as.numeric(year_epiweek)) |>
+         year_epiweek = paste0(year, sprintf("%02d", epiweek))) |>
+  mutate(year_epiweek=as.numeric(year_epiweek)) |> 
+  arrange(year_epiweek, LOCATION)
+
+counts <- metadata |> 
   count(LOCATION, year_epiweek) |>
   arrange(year_epiweek, LOCATION) |>
-  mutate(year_epiweek = factor(year_epiweek)) |>
-  filter(LOCATION!="Lower_Roxbury", # sampling did not start here until 2024
-         LOCATION!="South Boston") # sampling ended after 2024
+  mutate(year_epiweek = factor(year_epiweek))
 
-counts |> filter(n>1) # Charlestown 202334
+  # notes RE Lower_Roxbury and South Boston
+  # Lower_Roxbury - sampling did not start here until 2024
+  # South Boston - sampling ended after 2024
+  # sewer was under construction, moved sampling from S Bos to L Rox
+  # L Rox and Rox in same zip 
+  # for concentration data, compared L Rox to Rox to see if similar
+  # could think about a weighted average
+  
+counts |> filter(n>1) 
+  # Charlestown 202334
+  # Lower_Roxbury 202410
 
 metadata |>
-  mutate(epiweek = epiweek(SAMPLING_DATE),
-         year = year(SAMPLING_DATE),
-         year_epiweek = paste(year,epiweek,sep = "")) |>
-  mutate(year_epiweek=as.numeric(year_epiweek)) |> 
-  filter(LOCATION=="Charlestown", year_epiweek==202334)
-  # 2 samples from 2023-08-21
-  # drop one?
+  filter(LOCATION=="Charlestown" & year_epiweek=="202334" | 
+           LOCATION=="Lower_Roxbury" & year_epiweek=="202410")
 
-plot_counts <- counts |>
+  # Charlestown 202334
+  # could be mislabling, biobot did not have info
+  # EXCLUDE BOTH
+
+  # Lower_Roxbury 202410
+  # 
+
+exclude <- metadata |>
+  filter(LOCATION=="Charlestown" & year_epiweek=="202334" | 
+           LOCATION=="Lower_Roxbury" & year_epiweek=="202410") |> 
+  select(FASTQ_ID)
+
+plot_counts <- metadata |> 
+  filter(!FASTQ_ID %in% exclude$FASTQ_ID) |> 
+  count(LOCATION, year_epiweek) |>
+  arrange(year_epiweek, LOCATION) |>
+  mutate(year_epiweek = factor(year_epiweek)) |> 
   ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(n))) +
   geom_tile() +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_fill_manual(values = c("#4C9AED", "#654CED"), name="sample count")
 plot_counts
+
+  # RE missing weeks
+  # vendor may have not sent samples if below quality threshold
+  # check concentration metadata to see if they exist there
+  # seq data may have also not been sent for non-detect weeks
+  # should be able to see in concentration data
+  # nondetects =/= below LOD
+  # check PCR folder
+  # link with KIT ID
+
+
+
+
+
+
 
