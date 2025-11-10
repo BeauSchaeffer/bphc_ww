@@ -86,7 +86,7 @@ exclude <- metadata |>
            LOCATION=="Lower_Roxbury" & year_epiweek=="202410") |> 
   select(FASTQ_ID)
 
-plot_counts <- metadata |> 
+p_counts <- metadata |> 
   filter(!FASTQ_ID %in% exclude$FASTQ_ID) |> 
   count(LOCATION, year_epiweek) |>
   arrange(year_epiweek, LOCATION) |>
@@ -96,7 +96,9 @@ plot_counts <- metadata |>
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_fill_manual(values = c("#4C9AED", "#654CED"), name="sample count")
-plot_counts
+p_counts
+
+ggsave("../figures/p_counts.jpg", p_counts, scale = 1.5)
 
   # RE missing weeks
   # vendor may have not sent samples if below quality threshold
