@@ -107,6 +107,7 @@ plot_counts
   # check PCR folder
   # link with KIT ID
 
+write_csv(metadata, "../data/meta_clean.csv") # 2024-11-10
 
 
 
