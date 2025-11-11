@@ -11,7 +11,7 @@ library(viridis)
 
 # Load data ---------------------------------------------------------------
 
-metadata <- read_csv("../data/meta_clean.csv")
+metadata <- read_rds("../data/meta_clean.rds")
 
 
 # Parse demix -------------------------------------------------------------
@@ -59,9 +59,6 @@ rm(abundances.temp, lineages.temp, results, summarized, end, i, sample.temp, sta
 
 ### files created: summarized.final, sublineages.final
 
-sublineages.final
-setDF(sublineages.final)
-
 ### clean up sample names
 sublineages.final$Sample <- sub("^([0-9]+).*", "\\1", sublineages.final$Sample)
 
@@ -70,60 +67,8 @@ sublineages.final$Sample <- sub("^([0-9]+).*", "\\1", sublineages.final$Sample)
 
 sublin_meta <- left_join(sublineages.final, metadata, by=c("Sample"="FASTQ_ID"))
 
-### manually collapsing lineages
-sublin_meta <- sublin_meta |> 
-  as_tibble() |> 
-  mutate(abundance = as.numeric(abundance)) |> 
-  
-  mutate(sublineage_new = case_when(
-    
-    str_detect(sublineage, "B\\.1\\.1\\.529") ~ "B.1.1.529.x", #
-    str_detect(sublineage, "BA\\.1") ~ "BA.1.x", #
-    
-    str_detect(sublineage, "BA\\.2\\.12\\.1") ~ "BA.2.12.1.x", #
-    str_detect(sublineage, "BA\\.2\\.75") ~ "BA.2.75.x", #
-    str_detect(sublineage, "CH\\.1\\.1") ~ "CH.1.1.x", #
-    str_detect(sublineage, "BA\\.2") ~ "BA.2.x", #
-    
-    str_detect(sublineage, "BA\\.2\\.86") ~ "BA.2.86.x", # 
-    str_detect(sublineage, "JN\\.1\\.11\\.1") ~ "JN.1.11.1.x", # 
-    str_detect(sublineage, "JN\\.1") ~ "JN.1.x", # 
-    
-    str_detect(sublineage, "XBB\\.1\\.5\\.70") ~ "XBB.1.5.70.x", #
-    str_detect(sublineage, "XBB\\.1\\.5") ~ "XBB.1.5.x", #
-    str_detect(sublineage, "XBB\\.1\\.16") ~ "XBB.1.16.x", #
-    str_detect(sublineage, "XBB\\.1\\.9") ~ "XBB.1.9.x", #
-    str_detect(sublineage, "XBB\\.2\\.3") ~ "XBB.2.3.x", #
-    str_detect(sublineage, "EG\\.5\\.1") ~ "EG.5.1.x", #
-    str_detect(sublineage, "HK\\.3") ~ "HK.3.x", #
-    str_detect(sublineage, "XBB") ~ "XBB.x", # 
-    
-    str_detect(sublineage, "BA\\.4") ~ "BA.4.x", #
-    
-    str_detect(sublineage, "BQ\\.1") ~ "BQ.1.x", #
-    str_detect(sublineage, "BA\\.5") ~ "BA.5.x", #
-    
-    # TRUE ~ sublineage
-    TRUE ~ "other"
-  )) |> 
-  mutate(sublineage_new=factor(sublineage_new)) |>
-  mutate(sublineage_new = factor(sublineage_new,
-                            levels = c("B.1.1.529.x",
-                                       "BA.1.x",
-                                       "BA.2.x",
-                                       "BA.2.86.x", "JN.1.x", "JN.1.11.1.x",
-                                       "BA.2.75.x", "CH.1.1.x",
-                                       "XBB.x", "XBB.1.5.x", "XBB.1.5.70.x",
-                                       "XBB.1.16.x",
-                                       "XBB.1.9.x", "EG.5.1.x", "HK.3.x",
-                                       "XBB.2.3.x",
-                                       "BA.2.12.1.x",
-                                       "BA.5.x",
-                                       "BQ.1.x",
-                                       "BA.4.x",
-                                       "other")))
 
-### Demix progress report
+# Demix progress report ---------------------------------------------------
 
 p_demix_progress <- metadata |> 
   filter(!FASTQ_ID %in% exclude$FASTQ_ID) |> 
@@ -142,24 +87,92 @@ p_demix_progress
 
 ggsave("../figures/p_demix_progress.jpg", p_demix_progress, scale = 1.5) # 2025-11-10
 
+# Collapsing sublineages --------------------------------------------------
+
+### fx - extract parent group
+
+parent_group <- function(x) {
+  out <- str_extract(x, "^[A-Za-z]+\\.[0-9]+")
+  ifelse(is.na(out), x, out)  # keep full token if no match (recombinants)
+}
+
+### fx - only keep parent groups that are greater than RA threshold in any sample
+
+keep_threshold <- function(dat, threshold = 0.05) {
+  dat |> 
+    mutate(group = parent_group(sublineage), # create parent lineage
+           abundance = as.numeric(abundance)) |>
+    group_by(Sample, group) |>
+    summarise(ra = sum(abundance, na.rm = TRUE), .groups = "drop") |> # sum RAs for collapsed lineages
+    filter(ra >= threshold) |>
+    distinct(group) |>
+    pull(group)
+}
+
+### fx - format dots in parent group names
+
+escape_dots <- function(x) gsub("\\.", "\\\\.", x)
+
+### fx - create "rules" for collapsing sublineages
+
+rules_from_keepers <- function(keepers, suffix = ".x") {
+  tibble(
+    pattern = paste0("^", escape_dots(keepers), "(?:\\.|$)"),
+    label   = paste0(keepers, suffix)
+  )
+}
+
+### fx - collapse sublineages based on rules above
+
+collapse_sublineages <- function(df, rules, other = "other", ignore_case = FALSE) {
+  out <- as_tibble(df)
+  out$sublineage <- coalesce(out$sublineage, "") # replace NA with empty string
+  out$sublin_collapse <- NA_character_ # initialize new col with NAs
+  
+  for (i in seq_len(nrow(rules))) {
+    rx <- rules$pattern[i] # identify current regex pattern
+    idx <- is.na(out$sublin_collapse) & str_detect(out$sublineage, rx) # identifies which rows to fill for a given rule
+    out$sublin_collapse[idx] <- rules$label[i] # assign corresponding label
+  }
+  
+  out$sublin_collapse[is.na(out$sublin_collapse)] <- other # if still NA, assign other
+  
+  out$sublin_collapse <- factor(out$sublin_collapse,
+                                levels = c(unique(rules$label), other)) # make factor
+  
+  # sum RA values over collapsed lineages
+  out <- out |> 
+    group_by(Sample, SAMPLING_DATE, LOCATION, epiweek, year, year_epiweek, sublin_collapse) |> 
+    summarise(abundance = sum(as.numeric(abundance), na.rm = TRUE), .groups = "drop")
+  
+  out
+}
+
+keepers <- keep_threshold(sublin_meta, threshold = 0.2)
+rules   <- rules_from_keepers(keepers)
+collapse_meta <- collapse_sublineages(sublin_meta, rules)
+
 # Weekly Lineage Composition x Neighborhood -------------------------------
 
-year_epiweek_levels <- sublin_meta |> 
+### identify set of weeks for plotting
+year_epiweek_levels <- collapse_meta |> 
   mutate(year_epiweek = as.character(year_epiweek)) |> 
   distinct(year_epiweek) |> 
   arrange(as.integer(year_epiweek)) |> 
   pull(year_epiweek)
 
-sublin_meta_complete <- sublin_meta |> 
+### create a "complete" dataset such that each location has a placeholder for all samples and lineage
+collapse_meta_complete <- collapse_meta |> 
   mutate(year_epiweek = factor(as.character(year_epiweek), levels = year_epiweek_levels)) |> 
   group_by(LOCATION) |> 
-  complete(year_epiweek = year_epiweek_levels, sublineage_new, fill = list(abundance = 0)) |> 
+  complete(year_epiweek = year_epiweek_levels, sublin_collapse, fill = list(abundance = 0)) |> 
   ungroup()
 
-p_RAxNB <- sublin_meta_complete |> 
-  ggplot(aes(x = year_epiweek, y = abundance, fill = sublineage_new)) +
+### plot the "complete" data x neighborhood
+p_RAxNB <- collapse_meta_complete |> 
+  ggplot(aes(x = year_epiweek, y = abundance, fill = sublin_collapse)) +
   geom_col() +
-  facet_wrap(~ LOCATION) + 
+  facet_wrap(~ LOCATION) +
   scale_x_discrete(drop = FALSE) +  # keep empty weeks
   labs(
     x = "year_epiweek", y = "Relative Abundance", fill = "sublineage",
@@ -170,6 +183,8 @@ p_RAxNB <- sublin_meta_complete |>
   scale_fill_viridis(option="turbo", discrete = T)
 p_RAxNB
 
-ggsave("../figures/p_RAxNB.jpg", p_RAxNB) # 2025-11-10
+ggsave("../figures/p_RAxNB.jpg", p_RAxNB) # 2025-11-11
+
+
 
 

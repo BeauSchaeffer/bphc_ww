@@ -22,7 +22,9 @@ metadata <- metadata[,1:6] |>
   # batch ID as character
   mutate(BATCH_ID=as.character(BATCH_ID)) |> 
   # locations as factors
-  mutate(LOCATION=as_factor(LOCATION))
+  mutate(LOCATION=as_factor(LOCATION)) |> 
+  # FASTQ_ID as character
+  mutate(FASTQ_ID=as.character(FASTQ_ID))
 
 baseload_ids <- baseload_ids |> 
   rename(FQ_ID=X1) |> 
@@ -109,7 +111,7 @@ ggsave("../figures/p_counts.jpg", p_counts, scale = 1.5)
   # check PCR folder
   # link with KIT ID
 
-write_csv(metadata, "../data/meta_clean.csv") # 2024-11-10
+write_rds(metadata, "../data/meta_clean.rds") # 2024-11-11
 
 
 
