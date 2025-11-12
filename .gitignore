@@ -1,4 +1,4 @@
-# data and intermediate files
+# raw data and intermediate files
 data/
 metadata/
 aligned/
@@ -33,6 +33,9 @@ testing.md
 .Rprofile
 .Renviron
 *.Rproj
+
+# analysis results
+analysis/figures
 
 # RETAIN select files
 !scripts/
