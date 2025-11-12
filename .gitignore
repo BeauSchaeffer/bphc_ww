@@ -35,7 +35,7 @@ testing.md
 *.Rproj
 
 # analysis results
-figures/
+analysis/figures/
 
 # RETAIN select files
 !scripts/
