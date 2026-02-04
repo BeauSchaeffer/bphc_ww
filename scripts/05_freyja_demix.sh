@@ -31,6 +31,8 @@ echo "Running freyja demix for $sample..."
 freyja demix \
   "$variants" "$depths" \
   --output "$outfile" \
-  --eps 0.000001
+  --eps 0.000001 \
+  --depthcutoff 10 \
+  --autoadapt
 
 echo "Done with $sample"
