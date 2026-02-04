@@ -85,7 +85,7 @@ p_demix_progress <- metadata |>
   scale_fill_manual(values = c("#4C9AED", "#654CED"), name="demix")
 p_demix_progress
 
-ggsave("../figures/p_demix_progress.jpg", p_demix_progress, scale = 1.5) # 2025-11-10
+# ggsave("../figures/p_demix_progress.jpg", p_demix_progress, scale = 1.5) # 2025-11-10
 
 # Collapsing sublineages --------------------------------------------------
 
@@ -98,61 +98,66 @@ parent_group <- function(x) {
 
 ### fx - only keep parent groups that are greater than RA threshold in any sample
 
-keep_threshold <- function(dat, threshold = 0.05) {
+keep_threshold_time <- function(dat, threshold = 0.05, 
+                                date_col = SAMPLING_DATE,
+                                suffix = ".x") {
   dat |> 
     mutate(group = parent_group(sublineage), # create parent lineage
-           abundance = as.numeric(abundance)) |>
-    group_by(Sample, group) |>
+           abundance = as.numeric(abundance),
+           date = as.Date({{ date_col }})
+           ) |>
+    group_by(Sample, date, group) |>
     summarise(ra = sum(abundance, na.rm = TRUE), .groups = "drop") |> # sum RAs for collapsed lineages
-    filter(ra >= threshold) |>
-    distinct(group) |>
-    pull(group)
+    group_by(date, group) |> 
+    summarise(max_ra_any_sample = max(ra, na.rm = TRUE), .groups = "drop") |> 
+    arrange(group, date) |> 
+    group_by(group) |> 
+    mutate(keep_by_date = cummax(max_ra_any_sample >= threshold)) |> 
+    ungroup() |> 
+    transmute(date, group, keep_by_date,
+              label = paste0(group, suffix))
 }
 
-### fx - format dots in parent group names
+tholds.t <- keep_threshold_time(sublin_meta)
 
-escape_dots <- function(x) gsub("\\.", "\\\\.", x)
+### fx - collapse using time aware threshold
 
-### fx - create "rules" for collapsing sublineages
-
-rules_from_keepers <- function(keepers, suffix = ".x") {
-  tibble(
-    pattern = paste0("^", escape_dots(keepers), "(?:\\.|$)"),
-    label   = paste0(keepers, suffix)
-  )
-}
-
-### fx - collapse sublineages based on rules above
-
-collapse_sublineages <- function(df, rules, other = "other", ignore_case = FALSE) {
-  out <- as_tibble(df)
-  out$sublineage <- coalesce(out$sublineage, "") # replace NA with empty string
-  out$sublin_collapse <- NA_character_ # initialize new col with NAs
+collapse_sublineages_timeaware <- function(df, threshold = 0.05,
+                                           other = "other",
+                                           date_col = SAMPLING_DATE,
+                                           suffix = ".x") {
   
-  for (i in seq_len(nrow(rules))) {
-    rx <- rules$pattern[i] # identify current regex pattern
-    idx <- is.na(out$sublin_collapse) & str_detect(out$sublineage, rx) # identifies which rows to fill for a given rule
-    out$sublin_collapse[idx] <- rules$label[i] # assign corresponding label
-  }
+  keep_tbl <- keep_threshold_time(df, threshold = threshold,
+                                date_col = {{ date_col }}, suffix = suffix)
   
-  out$sublin_collapse[is.na(out$sublin_collapse)] <- other # if still NA, assign other
-  
-  out$sublin_collapse <- factor(out$sublin_collapse,
-                                levels = c(unique(rules$label), other)) # make factor
-  
-  # sum RA values over collapsed lineages
-  out <- out |> 
+  df |> 
+    as_tibble() |> 
+    mutate(
+      sublineage = coalesce(sublineage, ""),
+      group = parent_group(sublineage),
+      abundance = as.numeric(abundance),
+      date = as.Date({{ date_col }})
+    ) |> 
+    left_join(keep_tbl %>% select(date, group, keep_by_date, label),
+              by = c("date", "group")) |> 
+    mutate(
+      sublin_collapse = if_else(keep_by_date==TRUE, label, other),
+      sublin_collapse = factor(sublin_collapse)
+    ) |> 
     group_by(Sample, SAMPLING_DATE, LOCATION, epiweek, year, year_epiweek, sublin_collapse) |> 
-    summarise(abundance = sum(as.numeric(abundance), na.rm = TRUE), .groups = "drop")
-  
-  out
+    summarise(abundance = sum(abundance, na.rm = TRUE), .groups = "drop")
 }
 
-keepers <- keep_threshold(sublin_meta, threshold = 0.2)
-rules   <- rules_from_keepers(keepers)
-collapse_meta <- collapse_sublineages(sublin_meta, rules)
 
 # Weekly Lineage Composition x Neighborhood -------------------------------
+
+collapse_meta <- collapse_sublineages_timeaware(
+  sublin_meta,
+  threshold = 0.2,
+  date_col = SAMPLING_DATE,
+  suffix = ".x",
+  other = "other"
+)
 
 ### identify set of weeks for plotting
 year_epiweek_levels <- collapse_meta |> 
@@ -183,7 +188,7 @@ p_RAxNB <- collapse_meta_complete |>
   scale_fill_viridis(option="turbo", discrete = T)
 p_RAxNB
 
-ggsave("../figures/p_RAxNB.jpg", p_RAxNB) # 2025-11-11
+# ggsave("../figures/p_RAxNB.jpg", p_RAxNB) # 2025-11-11
 
 
 
