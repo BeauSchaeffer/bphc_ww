@@ -37,6 +37,9 @@ testing.md
 # analysis results
 analysis/figures/
 
+# sync scripts
+scripts/sync_freyja_agg.sh
+
 # RETAIN select files
 !scripts/
 !reference/
