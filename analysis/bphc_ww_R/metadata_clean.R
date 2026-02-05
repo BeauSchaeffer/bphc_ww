@@ -11,7 +11,11 @@ metadata <- read_csv("../../metadata/bphc_biobot_sequence_metadata.csv")
 
 baseload_ids <- read_table("../../metadata/baseload_ids.txt",col_names = F)
 
-# Cleaning ----------------------------------------------------------------
+clin_lin <- read_tsv("../data/var_surv_less_filt.tsv")
+
+
+# Cleaning WW metadata ----------------------------------------------------
+
 
 metadata <- metadata[,1:6] |> 
   # format dates
@@ -30,7 +34,7 @@ baseload_ids <- baseload_ids |>
   rename(FQ_ID=X1) |> 
   mutate(FQ_ID=as.character(FQ_ID))
 
-# Cross checks ------------------------------------------------------------
+### cross checks
 
   # fastq files without metadata?
 baseload_ids$FQ_ID %in% metadata$FASTQ_ID |> table()
@@ -44,8 +48,7 @@ metadata <- metadata |>
   # drop metadata with no fastq file
   filter(FASTQ_ID %in% baseload_ids$FQ_ID)
 
-
-# Sampling by neighborhood ------------------------------------------------
+### sampling by neighborhood
 
   # add year_epiweek and sort
 metadata <- metadata |>
@@ -100,7 +103,7 @@ p_counts <- metadata |>
   scale_fill_manual(values = c("#4C9AED", "#654CED"), name="sample count")
 p_counts
 
-ggsave("../figures/p_counts.jpg", p_counts, scale = 1.5)
+# ggsave("../figures/p_counts.jpg", p_counts, scale = 1.5)
 
   # RE missing weeks
   # vendor may have not sent samples if below quality threshold
@@ -111,10 +114,25 @@ ggsave("../figures/p_counts.jpg", p_counts, scale = 1.5)
   # check PCR folder
   # link with KIT ID
 
-write_rds(metadata, "../data/meta_clean.rds") # 2024-11-11
+# write_rds(metadata, "../data/meta_clean.rds") # 2024-11-11
 
 
+# Clean clinical lineage and metadata -------------------------------------
 
 
+head(metadata)
 
+### format to match ww metadata
+
+clin_lin <- clin_lin |>
+  mutate(Sample = `Accession ID`,
+         sublineage = `Pango lineage`,
+         SAMPLING_DATE = `Collection date`,
+         .keep = "none") |> 
+  mutate(epiweek = epiweek(SAMPLING_DATE),
+         year = year(SAMPLING_DATE),
+         year_epiweek = paste0(year, sprintf("%02d", epiweek))) |>
+  mutate(year_epiweek=as.numeric(year_epiweek))
+
+# write_rds(clin_lin, "../data/clin_lin.rds") # 2026-02-05
 

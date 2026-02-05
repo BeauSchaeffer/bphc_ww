@@ -13,8 +13,11 @@ library(viridis)
 
 metadata <- read_rds("../data/meta_clean.rds")
 
+clin_lin <- read_rds("../data/clin_lin.rds")
+
 
 # Parse demix -------------------------------------------------------------
+
 
 ### Code credit for parsing the demix output: https://github.com/a-roguet
 
@@ -22,7 +25,7 @@ results<-read.table("../../freyja_aggregate/aggregated.tsv", fill = TRUE, sep = 
 results<-as.data.frame(sapply(results, function(x) str_replace_all(x, "[',()\\]\\[]", ""))) # Removed the unwanted character: [], () and commas
 results<-as.data.frame(sapply(results, function(x) trimws(gsub("\\s+", " ", x)))) # Removed double spaces
 
-# Summarized data
+### Summarized data
 summarized<-as.data.frame(setDT(tstrsplit(as.character(results$summarized), " ", fixed=TRUE))[]) # Extract Summarized data
 summarized$sample<-results$X
 
@@ -38,7 +41,7 @@ summarized.final<-summarized.final[complete.cases(summarized.final), ]
 names(summarized.final)<-c("Sample", "lineage", "abundance")
 
 
-# Sublineages data
+### Sublineages data
 for(i in 1:nrow(results)){
   lineages.temp<-as.data.frame(t(setDT(tstrsplit(as.character(results[i, 3]), " ", fixed=TRUE))[]))
   abundances.temp<-as.data.frame(t(setDT(tstrsplit(as.character(results[i, 4]), " ", fixed=TRUE))[]))
@@ -62,34 +65,49 @@ rm(abundances.temp, lineages.temp, results, summarized, end, i, sample.temp, sta
 ### clean up sample names
 sublineages.final$Sample <- sub("^([0-9]+).*", "\\1", sublineages.final$Sample)
 
+### Freyja collapse lineage option results in classifications like "BA.4.6-like" or "BA.5.2-like2"
+  ### remove "-likeN" suffix
+
+sublineages.final <- sublineages.final %>%
+  mutate(sublineage = str_remove(sublineage, "-like[0-9]*$"))
+
 
 # Merge with metadata -----------------------------------------------------
+
 
 sublin_meta <- left_join(sublineages.final, metadata, by=c("Sample"="FASTQ_ID"))
 
 
 # Demix progress report ---------------------------------------------------
 
-p_demix_progress <- metadata |> 
-  filter(!FASTQ_ID %in% exclude$FASTQ_ID) |> 
-  mutate(freyja = case_when(
-    FASTQ_ID %in% sublineages.final$Sample ~ 1,
-    !FASTQ_ID %in% sublineages.final$Sample ~ 0
-  )) |> 
-  arrange(year_epiweek, LOCATION) |>
-  mutate(year_epiweek = factor(year_epiweek)) |> 
-  ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(freyja))) +
-  geom_tile() +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_fill_manual(values = c("#4C9AED", "#654CED"), name="demix")
-p_demix_progress
-
+# exclude <- metadata |>
+#   filter(LOCATION=="Charlestown" & year_epiweek=="202334" | 
+#            LOCATION=="Lower_Roxbury" & year_epiweek=="202410") |> 
+#   select(FASTQ_ID)
+# 
+# p_demix_progress <- metadata |> 
+#   filter(!FASTQ_ID %in% exclude$FASTQ_ID) |> 
+#   mutate(freyja = case_when(
+#     FASTQ_ID %in% sublineages.final$Sample ~ 1,
+#     !FASTQ_ID %in% sublineages.final$Sample ~ 0
+#   )) |> 
+#   arrange(year_epiweek, LOCATION) |>
+#   mutate(year_epiweek = factor(year_epiweek)) |> 
+#   ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(freyja))) +
+#   geom_tile() +
+#   theme_classic() +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   scale_fill_manual(values = c("#4C9AED", "#654CED"), name="demix")
+# p_demix_progress
+#
 # ggsave("../figures/p_demix_progress.jpg", p_demix_progress, scale = 1.5) # 2025-11-10
+
 
 # Collapsing sublineages --------------------------------------------------
 
+
 ### fx - extract parent group
+  ### this fx used within keep_threshold_time()
 
 parent_group <- function(x) {
   out <- str_extract(x, "^[A-Za-z]+\\.[0-9]+")
@@ -97,8 +115,9 @@ parent_group <- function(x) {
 }
 
 ### fx - only keep parent groups that are greater than RA threshold in any sample
+  ### this fx used within collapse_sublineages_timeaware()
 
-keep_threshold_time <- function(dat, threshold = 0.05, 
+keep_threshold_time <- function(dat, threshold = 0.1, 
                                 date_col = SAMPLING_DATE,
                                 suffix = ".x") {
   dat |> 
@@ -118,17 +137,24 @@ keep_threshold_time <- function(dat, threshold = 0.05,
               label = paste0(group, suffix))
 }
 
-tholds.t <- keep_threshold_time(sublin_meta)
+  # view keepers
+  # tholds.t <- keep_threshold_time(sublin_meta)
 
-### fx - collapse using time aware threshold
+### fx - collapse using time-aware threshold
+  # if using combined dataset, keep_tbl from combined data can be supplied 
+  # if using single dataset, keep_tbl can be computed internally
 
-collapse_sublineages_timeaware <- function(df, threshold = 0.05,
+collapse_sublineages_timeaware <- function(df, threshold = 0.1,
                                            other = "other",
                                            date_col = SAMPLING_DATE,
-                                           suffix = ".x") {
+                                           suffix = ".x",
+                                           keep_tbl = NULL) {
   
-  keep_tbl <- keep_threshold_time(df, threshold = threshold,
-                                date_col = {{ date_col }}, suffix = suffix)
+  # if no keep_tbl provided, generate one
+  if (is.null(keep_tbl)) {
+    keep_tbl <- keep_threshold_time(df, threshold = threshold,
+                                    date_col = {{ date_col }}, suffix = suffix)
+  }
   
   df |> 
     as_tibble() |> 
@@ -150,6 +176,7 @@ collapse_sublineages_timeaware <- function(df, threshold = 0.05,
 
 
 # Weekly Lineage Composition x Neighborhood -------------------------------
+
 
 collapse_meta <- collapse_sublineages_timeaware(
   sublin_meta,
@@ -185,10 +212,38 @@ p_RAxNB <- collapse_meta_complete |>
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_fill_viridis(option="turbo", discrete = T)
+  scale_fill_viridis(option="turbo", discrete = T) +
+  geom_text(aes(label = ifelse(abundance > 0.05, 
+                               as.character(sublin_collapse), "")),
+            position = position_stack(vjust = 0.5),
+            size = 2.25, color = "white")
 p_RAxNB
 
-# ggsave("../figures/p_RAxNB.jpg", p_RAxNB) # 2025-11-11
+ggsave("../figures/p_RAxNB.jpg", p_RAxNB, scale = 1.25) # 2025-02-05
+
+
+# Incorp clinical data ----------------------------------------------------
+
+
+### combine datasets
+
+clin_ww_comb <- bind_rows(
+  sublin_meta |> mutate(source = "wastewater"),
+  clin_lin |> mutate(source = "clinical")
+)
+
+### create keep table from combined dataset
+
+keep_tbl_comb <- keep_threshold_time(clin_ww_comb, threshold = 0.1)
+
+### apply combined keep table to ww and clinical data individually 
+
+collapse_ww <- collapse_sublineages_timeaware(sublin_meta, keep_tbl = keep_tbl_comb)
+collapse_clin <- collapse_sublineages_timeaware(clin_lin, keep_tbl = keep_tbl_comb)
+
+
+
+
 
 
 
