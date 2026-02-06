@@ -164,7 +164,7 @@ collapse_sublineages_timeaware <- function(df, threshold = 0.1,
       abundance = as.numeric(abundance),
       date = as.Date({{ date_col }})
     ) |> 
-    left_join(keep_tbl %>% select(date, group, keep_by_date, label),
+    left_join(keep_tbl |> select(date, group, keep_by_date, label),
               by = c("date", "group")) |> 
     mutate(
       sublin_collapse = if_else(keep_by_date==TRUE, label, other),
@@ -222,14 +222,36 @@ p_RAxNB
 ggsave("../figures/p_RAxNB.jpg", p_RAxNB, scale = 1.25) # 2025-02-05
 
 
-# Incorp clinical data ----------------------------------------------------
+# Incorporate clinical data -----------------------------------------------
 
+### calculate weekly RAs in clinical data
+
+clinical <- clin_lin |> 
+  mutate(parentsub = parent_group(sublineage)) |> 
+  group_by(year_epiweek, parentsub) |> 
+  summarise(count = n())  |> 
+  ungroup() |> 
+  group_by(year_epiweek) |> 
+  mutate(abundance=count/sum(count)) |> 
+  ungroup() |> 
+  rename(sublineage=parentsub) |> 
+  mutate(year = year_epiweek %/% 100,
+         week = year_epiweek %% 100,
+         year_first = ymd(paste0(year, "-01-01")) + weeks(week - 1),
+         SAMPLING_DATE = floor_date(year_first, "week", week_start = 7),
+         LOCATION = NA,
+         Sample=NA,
+         epiweek=NA)
+
+### filter to relevant time
+
+clinical <- clinical |> filter(year_epiweek %in% sublin_meta$year_epiweek)
 
 ### combine datasets
 
 clin_ww_comb <- bind_rows(
-  sublin_meta |> mutate(source = "wastewater"),
-  clin_lin |> mutate(source = "clinical")
+  sublin_meta |> mutate(source = "wastewater", abundance=as.numeric(abundance)),
+  clinical |> mutate(source = "clinical")
 )
 
 ### create keep table from combined dataset
@@ -239,7 +261,41 @@ keep_tbl_comb <- keep_threshold_time(clin_ww_comb, threshold = 0.1)
 ### apply combined keep table to ww and clinical data individually 
 
 collapse_ww <- collapse_sublineages_timeaware(sublin_meta, keep_tbl = keep_tbl_comb)
-collapse_clin <- collapse_sublineages_timeaware(clin_lin, keep_tbl = keep_tbl_comb)
+collapse_clin <- collapse_sublineages_timeaware(clinical, keep_tbl = keep_tbl_comb)
+
+### this again
+
+### identify set of weeks for plotting
+year_epiweek_levels <- collapse_clin |> 
+  mutate(year_epiweek = as.character(year_epiweek)) |> 
+  distinct(year_epiweek) |> 
+  arrange(as.integer(year_epiweek)) |> 
+  pull(year_epiweek)
+
+### create a "complete" dataset such that each location has a placeholder for all samples and lineage
+collapse_clin_complete <- collapse_clin |> 
+  mutate(year_epiweek = factor(as.character(year_epiweek), levels = year_epiweek_levels)) |> 
+  group_by(LOCATION) |> 
+  complete(year_epiweek = year_epiweek_levels, sublin_collapse, fill = list(abundance = 0)) |> 
+  ungroup()
+
+### plot the "complete" data x neighborhood
+collapse_clin_complete |> 
+  ggplot(aes(x = year_epiweek, y = abundance, fill = sublin_collapse)) +
+  geom_col() +
+  facet_wrap(~ LOCATION) +
+  scale_x_discrete(drop = FALSE) +  # keep empty weeks
+  labs(
+    x = "year_epiweek", y = "Relative Abundance", fill = "sublineage",
+    title = "SARS-CoV-2 Weekly Lineage Composition - Clinical"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_viridis(option="turbo", discrete = T) +
+  geom_text(aes(label = ifelse(abundance > 0.05, 
+                               as.character(sublin_collapse), "")),
+            position = position_stack(vjust = 0.5),
+            size = 2.25, color = "white")
 
 
 
