@@ -11,7 +11,7 @@ library(viridis)
 
 # Load data ---------------------------------------------------------------
 
-metadata <- read_rds("../data/meta_clean.rds")
+ww_metadata <- read_rds("../data/meta_clean.rds")
 
 clin_lin <- read_rds("../data/clin_lin.rds")
 
@@ -75,7 +75,7 @@ sublineages.final <- sublineages.final %>%
 # Merge with metadata -----------------------------------------------------
 
 
-sublin_meta <- left_join(sublineages.final, metadata, by=c("Sample"="FASTQ_ID"))
+sublin_meta <- left_join(sublineages.final, ww_metadata, by=c("Sample"="FASTQ_ID"))
 
 
 # Demix progress report ---------------------------------------------------
