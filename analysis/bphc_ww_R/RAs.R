@@ -69,7 +69,7 @@ sublineages.final$Sample <- sub("^([0-9]+).*", "\\1", sublineages.final$Sample)
   ### remove "-likeN" suffix
 
 sublineages.final <- sublineages.final %>%
-  mutate(sublineage = str_remove(sublineage, "-like[0-9]*$"))
+  mutate(sublineage = str_remove(as.character(sublineage), "-like[0-9]*$"))
 
 
 # Merge with metadata -----------------------------------------------------
@@ -131,14 +131,15 @@ keep_threshold_time <- function(dat, threshold = 0.1,
     summarise(max_ra_any_sample = max(ra, na.rm = TRUE), .groups = "drop") |> 
     arrange(group, date) |> 
     group_by(group) |> 
-    mutate(keep_by_date = cummax(max_ra_any_sample >= threshold)) |> 
+    mutate(keep_by_date = cummax(max_ra_any_sample >= threshold)) |>
+    # once a lineage reaches the threshold it is named moving forward, rather than "other"
     ungroup() |> 
     transmute(date, group, keep_by_date,
               label = paste0(group, suffix))
 }
 
   # view keepers
-  # tholds.t <- keep_threshold_time(sublin_meta)
+  # tholds.t <- keep_threshold_time(sublin_meta) |> arrange(date)
 
 ### fx - collapse using time-aware threshold
   # if using combined dataset, keep_tbl from combined data can be supplied 
@@ -156,7 +157,7 @@ collapse_sublineages_timeaware <- function(df, threshold = 0.1,
                                     date_col = {{ date_col }}, suffix = suffix)
   }
   
-  df |> 
+  df |>
     as_tibble() |> 
     mutate(
       sublineage = coalesce(sublineage, ""),
@@ -167,10 +168,11 @@ collapse_sublineages_timeaware <- function(df, threshold = 0.1,
     left_join(keep_tbl |> select(date, group, keep_by_date, label),
               by = c("date", "group")) |> 
     mutate(
+      keep_by_date = coalesce(keep_by_date, FALSE),
       sublin_collapse = if_else(keep_by_date==TRUE, label, other),
       sublin_collapse = factor(sublin_collapse)
     ) |> 
-    group_by(Sample, SAMPLING_DATE, LOCATION, epiweek, year, year_epiweek, sublin_collapse) |> 
+    group_by(Sample, date, LOCATION, epiweek, year, year_epiweek, sublin_collapse) |> 
     summarise(abundance = sum(abundance, na.rm = TRUE), .groups = "drop")
 }
 
@@ -178,48 +180,48 @@ collapse_sublineages_timeaware <- function(df, threshold = 0.1,
 # Weekly Lineage Composition x Neighborhood -------------------------------
 
 
-collapse_meta <- collapse_sublineages_timeaware(
-  sublin_meta,
-  threshold = 0.2,
-  date_col = SAMPLING_DATE,
-  suffix = ".x",
-  other = "other"
-)
-
-### identify set of weeks for plotting
-year_epiweek_levels <- collapse_meta |> 
-  mutate(year_epiweek = as.character(year_epiweek)) |> 
-  distinct(year_epiweek) |> 
-  arrange(as.integer(year_epiweek)) |> 
-  pull(year_epiweek)
-
-### create a "complete" dataset such that each location has a placeholder for all samples and lineage
-collapse_meta_complete <- collapse_meta |> 
-  mutate(year_epiweek = factor(as.character(year_epiweek), levels = year_epiweek_levels)) |> 
-  group_by(LOCATION) |> 
-  complete(year_epiweek = year_epiweek_levels, sublin_collapse, fill = list(abundance = 0)) |> 
-  ungroup()
-
-### plot the "complete" data x neighborhood
-p_RAxNB <- collapse_meta_complete |> 
-  ggplot(aes(x = year_epiweek, y = abundance, fill = sublin_collapse)) +
-  geom_col() +
-  facet_wrap(~ LOCATION) +
-  scale_x_discrete(drop = FALSE) +  # keep empty weeks
-  labs(
-    x = "year_epiweek", y = "Relative Abundance", fill = "sublineage",
-    title = "SARS-CoV-2 Weekly Lineage Composition x Neighborhood"
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_fill_viridis(option="turbo", discrete = T) +
-  geom_text(aes(label = ifelse(abundance > 0.05, 
-                               as.character(sublin_collapse), "")),
-            position = position_stack(vjust = 0.5),
-            size = 2.25, color = "white")
-p_RAxNB
-
-ggsave("../figures/p_RAxNB.jpg", p_RAxNB, scale = 1.25) # 2025-02-05
+# collapse_meta <- collapse_sublineages_timeaware(
+#   sublin_meta,
+#   threshold = 0.2,
+#   date_col = SAMPLING_DATE,
+#   suffix = ".x",
+#   other = "other"
+# )
+# 
+# ### identify set of weeks for plotting
+# year_epiweek_levels <- collapse_meta |> 
+#   mutate(year_epiweek = as.character(year_epiweek)) |> 
+#   distinct(year_epiweek) |> 
+#   arrange(as.integer(year_epiweek)) |> 
+#   pull(year_epiweek)
+# 
+# ### create a "complete" dataset such that each location has a placeholder for all samples and lineage
+# collapse_meta_complete <- collapse_meta |> 
+#   mutate(year_epiweek = factor(as.character(year_epiweek), levels = year_epiweek_levels)) |> 
+#   group_by(LOCATION) |> 
+#   complete(year_epiweek = year_epiweek_levels, sublin_collapse, fill = list(abundance = 0)) |> 
+#   ungroup()
+# 
+# ### plot the "complete" data x neighborhood
+# p_RAxNB <- collapse_meta_complete |> 
+#   ggplot(aes(x = year_epiweek, y = abundance, fill = sublin_collapse)) +
+#   geom_col() +
+#   facet_wrap(~ LOCATION) +
+#   scale_x_discrete(drop = FALSE) +  # keep empty weeks
+#   labs(
+#     x = "year_epiweek", y = "Relative Abundance", fill = "sublineage",
+#     title = "SARS-CoV-2 Weekly Lineage Composition x Neighborhood"
+#   ) +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   scale_fill_viridis(option="turbo", discrete = T) +
+#   geom_text(aes(label = ifelse(abundance > 0.05, 
+#                                as.character(sublin_collapse), "")),
+#             position = position_stack(vjust = 0.5),
+#             size = 2.25, color = "white")
+# p_RAxNB
+# 
+# ggsave("../figures/p_RAxNB.jpg", p_RAxNB, scale = 1.25) # 2025-02-05
 
 
 # Incorporate clinical data -----------------------------------------------
@@ -239,7 +241,9 @@ clinical <- clin_lin |>
          week = year_epiweek %% 100,
          year_first = ymd(paste0(year, "-01-01")) + weeks(week - 1),
          SAMPLING_DATE = floor_date(year_first, "week", week_start = 7),
-         LOCATION = NA,
+         
+         # placeholder columns so collapse_sublineages_timeaware() functions properly
+         LOCATION = NA, 
          Sample=NA,
          epiweek=NA)
 
@@ -263,8 +267,6 @@ keep_tbl_comb <- keep_threshold_time(clin_ww_comb, threshold = 0.1)
 collapse_ww <- collapse_sublineages_timeaware(sublin_meta, keep_tbl = keep_tbl_comb)
 collapse_clin <- collapse_sublineages_timeaware(clinical, keep_tbl = keep_tbl_comb)
 
-### this again
-
 ### identify set of weeks for plotting
 year_epiweek_levels <- collapse_clin |> 
   mutate(year_epiweek = as.character(year_epiweek)) |> 
@@ -275,15 +277,12 @@ year_epiweek_levels <- collapse_clin |>
 ### create a "complete" dataset such that each location has a placeholder for all samples and lineage
 collapse_clin_complete <- collapse_clin |> 
   mutate(year_epiweek = factor(as.character(year_epiweek), levels = year_epiweek_levels)) |> 
-  group_by(LOCATION) |> 
-  complete(year_epiweek = year_epiweek_levels, sublin_collapse, fill = list(abundance = 0)) |> 
-  ungroup()
+  complete(year_epiweek = year_epiweek_levels, sublin_collapse, fill = list(abundance = 0))
 
-### plot the "complete" data x neighborhood
-collapse_clin_complete |> 
+### plot the "complete" data for clinical
+p_RAxClin <- collapse_clin_complete |> 
   ggplot(aes(x = year_epiweek, y = abundance, fill = sublin_collapse)) +
   geom_col() +
-  facet_wrap(~ LOCATION) +
   scale_x_discrete(drop = FALSE) +  # keep empty weeks
   labs(
     x = "year_epiweek", y = "Relative Abundance", fill = "sublineage",
@@ -296,7 +295,34 @@ collapse_clin_complete |>
                                as.character(sublin_collapse), "")),
             position = position_stack(vjust = 0.5),
             size = 2.25, color = "white")
+p_RAxClin
 
+
+### create a "complete" dataset such that each location has a placeholder for all samples and lineage
+collapse_ww_complete <- collapse_ww |> 
+  mutate(year_epiweek = factor(as.character(year_epiweek), levels = year_epiweek_levels)) |> 
+  group_by(LOCATION) |> 
+  complete(year_epiweek = year_epiweek_levels, sublin_collapse, fill = list(abundance = 0)) |> 
+  ungroup()
+
+### plot the "complete" data x neighborhood
+p_RAxNB <- collapse_ww_complete |> 
+  ggplot(aes(x = year_epiweek, y = abundance, fill = sublin_collapse)) +
+  geom_col() +
+  scale_x_discrete(drop = FALSE) +  # keep empty weeks
+  labs(
+    x = "year_epiweek", y = "Relative Abundance", fill = "sublineage",
+    title = "SARS-CoV-2 Weekly Lineage Composition - WW"
+  ) +
+  theme_minimal() +
+  facet_wrap(~ LOCATION) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_viridis(option="turbo", discrete = T) +
+  geom_text(aes(label = ifelse(abundance > 0.05, 
+                               as.character(sublin_collapse), "")),
+            position = position_stack(vjust = 0.5),
+            size = 2.25, color = "white")
+p_RAxNB
 
 
 
