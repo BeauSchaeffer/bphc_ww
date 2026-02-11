@@ -97,11 +97,12 @@ exclude <- ww_metadata |>
            LOCATION=="Lower Roxbury" & year_epiweek=="202410") |> 
   select(FASTQ_ID)
 
-p_counts <- ww_metadata |> 
-  filter(!FASTQ_ID %in% exclude$FASTQ_ID) |> 
+ww_metadata <- ww_metadata |> filter(!FASTQ_ID %in% exclude$FASTQ_ID)
+
+p_counts <- ww_metadata |>
   count(LOCATION, year_epiweek) |>
   arrange(year_epiweek, LOCATION) |>
-  mutate(year_epiweek = factor(year_epiweek)) |> 
+  mutate(year_epiweek = factor(year_epiweek)) |>
   ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(n))) +
   geom_tile() +
   theme_classic() +
@@ -120,7 +121,7 @@ p_counts
   # check PCR folder
   # link with KIT ID
 
-# write_rds(ww_metadata, "../data/meta_clean.rds") # 2026-02-10
+# write_rds(ww_metadata, "../data/meta_clean.rds") # 2026-02-11
 
 
 # Clinical data from GISAID -----------------------------------------------
@@ -176,6 +177,22 @@ pop_wts <- ww_pcr |>
   summarise(pop=max(population_served)) |> 
   ungroup() |> 
   mutate(popwt = pop/sum(pop))
+
+
+# write_rds(pop_wts, "../data/pop_wts.rds") # 2026-02-10
+
+rm(list=setdiff(ls(), c("clin_lin","ww_metadata","ww_pcr","pop_wts")))
+
+
+# create weekly averages for viral loads by neighborhood
+
+ww_pcr |> 
+  group_by(LOCATION, year_epiweek) |> 
+  summarise(
+    avgeffCopiesL=mean(effCopiesL),
+    avgrawCopiesL=mean(rawCopiesL),
+    .groups = "drop"
+    )
 
 
 
