@@ -15,6 +15,8 @@ ww_metadata <- read_rds("../data/meta_clean.rds")
 
 clin_lin <- read_rds("../data/clin_lin.rds")
 
+pop_wts <- read_rds("../data/pop_wts.rds")
+
 
 # Parse demix -------------------------------------------------------------
 
@@ -236,21 +238,38 @@ combined_for_keep <- bind_rows(
 
 
 keep_tbl <- keep_threshold_time(combined_for_keep,
-                                threshold = 0.1,
+                                threshold = 0.2,
                                 time_col = year_epiweek,
                                 suffix = ".x")
 
 ww_collapsed <- collapse_sublineages_timeaware(sublin_meta,
-                                               threshold = 0.1,
+                                               threshold = 0.2,
                                                time_col = year_epiweek,
                                                suffix = ".x",
                                                keep_tbl = keep_tbl)
 
 clin_collapsed <- collapse_sublineages_timeaware(clinical,
-                                                 threshold = 0.1,
+                                                 threshold = 0.2,
                                                  time_col = year_epiweek,
                                                  suffix = ".x",
                                                  keep_tbl = keep_tbl)
+
+ # stable lineage order for all plots
+lin_levels <- sort(unique(c(
+  as.character(ww_collapsed$sublin_collapse),
+  as.character(clin_collapsed$sublin_collapse)
+)))
+  # force "other" to last
+lin_levels <- c(setdiff(lin_levels, "other"), "other")
+
+  # fixed color mapping for all lineage levels (stable across plots)
+fill_cols <- setNames(viridis::viridis(length(lin_levels), option = "turbo"),
+                      lin_levels)
+
+
+  # apply ordering
+ww_collapsed  <- ww_collapsed  |> mutate(sublin_collapse = factor(sublin_collapse, levels = lin_levels))
+clin_collapsed <- clin_collapsed |> mutate(sublin_collapse = factor(sublin_collapse, levels = lin_levels))
 
 
 # Plot clinical -----------------------------------------------------------
@@ -272,6 +291,9 @@ clin_collapsed_complete <- clin_collapsed |>
   ) |>
   mutate(time = factor(time, levels = year_epiweek_levels))
 
+clin_collapsed_complete <- clin_collapsed_complete |>
+  mutate(sublin_collapse = factor(sublin_collapse, levels = lin_levels))
+
 
 ### plot the "complete" data for clinical
 p_RAxClin <- clin_collapsed_complete |>
@@ -284,7 +306,7 @@ p_RAxClin <- clin_collapsed_complete |>
   ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_fill_viridis(option = "turbo", discrete = TRUE) +
+  scale_fill_manual(values = fill_cols, drop = FALSE) +
   geom_text(
     aes(label = ifelse(abundance > 0.05, as.character(sublin_collapse), "")),
     position = position_stack(vjust = 0.5),
@@ -306,6 +328,10 @@ ww_collapsed_complete <- ww_collapsed |>
   ) |>
   mutate(time = factor(time, levels = year_epiweek_levels))
 
+
+ww_collapsed_complete <- ww_collapsed_complete |>
+  mutate(sublin_collapse = factor(sublin_collapse, levels = lin_levels))
+
 ### plot the "complete" data for ww
 p_RAxNB <- ww_collapsed_complete |>
   ggplot(aes(x = time, y = abundance, fill = sublin_collapse)) +
@@ -321,7 +347,7 @@ p_RAxNB <- ww_collapsed_complete |>
     axis.text.x = element_text(angle = 45, hjust = 1),
     panel.spacing = unit(0.75, "lines")
   ) +
-  scale_fill_viridis(option = "turbo", discrete = TRUE) +
+  scale_fill_manual(values = fill_cols, drop = FALSE) +
   geom_text(
     aes(label = ifelse(abundance > 0.05, as.character(sublin_collapse), "")),
     position = position_stack(vjust = 0.5),
@@ -329,6 +355,93 @@ p_RAxNB <- ww_collapsed_complete |>
   )
 
 p_RAxNB
+
+
+
+# WW citywide -------------------------------------------------------------
+
+### *** REVIEW WEIGHTING SCHEME *** ###
+
+ww_locweek <- ww_collapsed |>
+  group_by(time, LOCATION, sublin_collapse) |>
+  summarise(abundance = mean(abundance, na.rm = TRUE), .groups = "drop") |>
+  mutate(sublin_collapse = factor(sublin_collapse, levels = lin_levels),
+         time = as.character(time))
+
+ww_locweek_complete <- ww_locweek |>
+  tidyr::complete(
+    tidyr::nesting(time, LOCATION),
+    sublin_collapse = factor(lin_levels, levels = lin_levels),
+    fill = list(abundance = 0)
+  )
+
+ww_locweek_complete <- ww_locweek_complete |>
+  group_by(time, LOCATION) |>
+  mutate(
+    denom = sum(abundance, na.rm = TRUE),
+    abundance = dplyr::if_else(denom > 0, abundance / denom, NA_real_)
+  ) |>
+  select(-denom) |>
+  ungroup()
+
+ww_citywide_weighted <- ww_locweek_complete |>
+  left_join(pop_wts |> select(LOCATION, pop), by = "LOCATION") |>
+  group_by(time, sublin_collapse) |>
+  summarise(
+    abundance = sum(pop * abundance, na.rm = TRUE) / sum(pop, na.rm = TRUE),
+    pop_covered = sum(pop, na.rm = TRUE),
+    n_locations = n_distinct(LOCATION),
+    .groups = "drop"
+  ) |>
+  mutate(
+    time = as.numeric(time),
+    LOCATION = "WW_citywide_weighted",
+    sublin_collapse = factor(sublin_collapse, levels = lin_levels)
+  )
+
+ww_citywide_weighted |>
+  group_by(time) |>
+  summarise(sum_abundance = sum(abundance), .groups = "drop") |>
+  summarise(min = min(sum_abundance), max = max(sum_abundance))
+
+ww_citywide_weighted_complete <- ww_citywide_weighted |>
+  mutate(time = as.character(time)) |>
+  tidyr::complete(
+    time = year_epiweek_levels,
+    sublin_collapse = factor(lin_levels, levels = lin_levels),
+    fill = list(abundance = 0, pop_covered = NA_real_, n_locations = NA_integer_, LOCATION = "WW_citywide_weighted")
+  ) |>
+  mutate(
+    time = factor(time, levels = year_epiweek_levels),
+    sublin_collapse = factor(sublin_collapse, levels = lin_levels)
+  )
+
+
+p_RAxCity <- ww_citywide_weighted_complete |>
+  ggplot(aes(x = time, y = abundance, fill = sublin_collapse)) +
+  geom_col() +
+  scale_x_discrete(drop = FALSE) +
+  labs(
+    x = "year_epiweek", y = "Relative Abundance", fill = "sublineage",
+    title = "SARS-CoV-2 Weekly Lineage Composition - Wastewater Citywide",
+    subtitle = "population weighted"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = fill_cols, drop = FALSE) +
+  geom_text(
+    aes(label = ifelse(abundance > 0.05, as.character(sublin_collapse), "")),
+    position = position_stack(vjust = 0.5),
+    size = 2.25, color = "white"
+  )
+
+p_RAxCity
+
+### 
+
+p_RAxClin
+p_RAxNB
+p_RAxCity
 
 
 
