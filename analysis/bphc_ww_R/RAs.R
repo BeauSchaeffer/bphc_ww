@@ -361,26 +361,41 @@ p_RAxNB
 # WW citywide -------------------------------------------------------------
 
 ### *** REVIEW WEIGHTING SCHEME *** ###
+  # build in option to wt by viral load
+  # function to run by month
+
+  # check for multiple samples per week
+  # ww_collapsed |>
+  #   count(time, LOCATION, sublin_collapse) |>
+  #   summarise(max_dups = max(n))
 
 ww_locweek <- ww_collapsed |>
-  group_by(time, LOCATION, sublin_collapse) |>
-  summarise(abundance = mean(abundance, na.rm = TRUE), .groups = "drop") |>
+  # only needed if multiple samples/week somewhere
+  # group_by(time, LOCATION, sublin_collapse) |>
+  # summarise(abundance = mean(abundance, na.rm = TRUE), .groups = "drop") |>
   mutate(sublin_collapse = factor(sublin_collapse, levels = lin_levels),
          time = as.character(time))
 
+  # for every time,location pair
+  # create rows for every sublin_collapse in lin_levels
+  # abundance set to 0 for missing lin_levels
 ww_locweek_complete <- ww_locweek |>
   tidyr::complete(
+    # nesting - only expand lineages within time-location pairs that already exist in the data.
     tidyr::nesting(time, LOCATION),
     sublin_collapse = factor(lin_levels, levels = lin_levels),
     fill = list(abundance = 0)
   )
 
+  # within-neighborhood, within-week renormalization
+  # ensures RAs sum exactly to 1 before weighting
+  # probably unnecessary but freyja outputs can sometimes fail to sum to 1
 ww_locweek_complete <- ww_locweek_complete |>
   group_by(time, LOCATION) |>
   mutate(
     denom = sum(abundance, na.rm = TRUE),
     abundance = dplyr::if_else(denom > 0, abundance / denom, NA_real_)
-  ) |>
+  ) |> 
   select(-denom) |>
   ungroup()
 
@@ -404,6 +419,7 @@ ww_citywide_weighted |>
   summarise(sum_abundance = sum(abundance), .groups = "drop") |>
   summarise(min = min(sum_abundance), max = max(sum_abundance))
 
+  # complete data for plotting
 ww_citywide_weighted_complete <- ww_citywide_weighted |>
   mutate(time = as.character(time)) |>
   tidyr::complete(
