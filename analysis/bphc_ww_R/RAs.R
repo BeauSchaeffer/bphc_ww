@@ -360,10 +360,6 @@ p_RAxNB
 
 # WW citywide -------------------------------------------------------------
 
-### *** REVIEW WEIGHTING SCHEME *** ###
-  # build in option to wt by viral load
-  # function to run by month
-
   # check for multiple samples per week
   # ww_collapsed |>
   #   count(time, LOCATION, sublin_collapse) |>
@@ -414,6 +410,7 @@ ww_citywide_weighted <- ww_locweek_complete |>
     sublin_collapse = factor(sublin_collapse, levels = lin_levels)
   )
 
+  # checks
 ww_citywide_weighted |>
   group_by(time) |>
   summarise(sum_abundance = sum(abundance), .groups = "drop") |>
