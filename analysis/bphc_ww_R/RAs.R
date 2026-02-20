@@ -314,6 +314,7 @@ p_RAxClin <- clin_collapsed_complete |>
   )
 
 p_RAxClin
+ggsave("../figures/p_RAxClin.jpg", p_RAxClin)
 
 
 # Plot WW -----------------------------------------------------------------
@@ -355,7 +356,7 @@ p_RAxNB <- ww_collapsed_complete |>
   )
 
 p_RAxNB
-
+ggsave("../figures/p_RAxNB.jpg", p_RAxNB, scale=1.5)
 
 
 # WW citywide -------------------------------------------------------------
@@ -449,6 +450,8 @@ p_RAxCity <- ww_citywide_weighted_complete |>
   )
 
 p_RAxCity
+
+ggsave("../figures/p_RAxCity.jpg", p_RAxCity)
 
 ### 
 
