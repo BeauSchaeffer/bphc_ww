@@ -184,20 +184,24 @@ pop_wts <- ww_pcr |>
 rm(list=setdiff(ls(), c("clin_lin","ww_metadata","ww_pcr","pop_wts")))
 
 
-# create weekly averages for viral loads by neighborhood
+# create general weights
 
-ww_pcr |> 
+conc_wts <- ww_pcr |> 
   group_by(LOCATION, year_epiweek) |> 
   summarise(
-    avgeffCopiesL=mean(effCopiesL),
-    avgrawCopiesL=mean(rawCopiesL),
+    meaneffCopiesL = mean(effCopiesL),
+    meanrawCopiesL = mean(rawCopiesL),
     .groups = "drop"
-    )
+  ) |> 
+  
+  # replace 0 values with 1s before taking log
+  mutate(meaneffCopiesL = ifelse(meaneffCopiesL<=0,1,meaneffCopiesL),
+         meanrawCopiesL = ifelse(meanrawCopiesL<=0,1,meanrawCopiesL)) |> 
+  
+  mutate(logeff = log(meaneffCopiesL),
+         lograw = log(meanrawCopiesL))
 
-
-
-
-
+write_rds(conc_wts, "../data/conc_wts.rds") # 2026-03-09
 
 
 

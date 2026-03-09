@@ -17,6 +17,8 @@ clin_lin <- read_rds("../data/clin_lin.rds")
 
 pop_wts <- read_rds("../data/pop_wts.rds")
 
+conc_wts <- read_rds("../data/conc_wts.rds")
+
 
 # Parse demix -------------------------------------------------------------
 
@@ -314,7 +316,7 @@ p_RAxClin <- clin_collapsed_complete |>
   )
 
 p_RAxClin
-ggsave("../figures/p_RAxClin.jpg", p_RAxClin)
+# ggsave("../figures/p_RAxClin.jpg", p_RAxClin)
 
 
 # Plot WW -----------------------------------------------------------------
@@ -356,10 +358,42 @@ p_RAxNB <- ww_collapsed_complete |>
   )
 
 p_RAxNB
-ggsave("../figures/p_RAxNB.jpg", p_RAxNB, scale=1.5)
+# ggsave("../figures/p_RAxNB.jpg", p_RAxNB, scale=1.5)
 
 
-# WW citywide -------------------------------------------------------------
+### concentration weighted
+
+ww_collapsed_complete |> 
+  mutate(year_epiweek = paste0(year, sprintf("%02d", epiweek)),
+         year_epiweek = ifelse(year_epiweek=="NANA",NA,year_epiweek),
+         year_epiweek=as.numeric(year_epiweek)) |> 
+  left_join(conc_wts, by=c("LOCATION", "year_epiweek")) |> 
+  mutate(abundance_LEwtd = abundance*logeff,
+         abundance_Ewtd = abundance*meaneffCopiesL) |> 
+  
+  ggplot(aes(x = time, y = abundance_Ewtd, fill = sublin_collapse)) +
+  geom_col() +
+  facet_wrap(~ LOCATION, scales = "free_y") +
+  scale_x_discrete(drop = FALSE) +  # keep empty weeks
+  labs(
+    x = "year_epiweek", y = "Absolute-ish Abundance", fill = "sublineage",
+    title = "SARS-CoV-2 Weekly Lineage Composition - Wastewater"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.spacing = unit(0.75, "lines")
+  ) +
+  scale_fill_manual(values = fill_cols, drop = FALSE) +
+  geom_text(
+    aes(label = ifelse(abundance > 0.05, as.character(sublin_collapse), "")),
+    position = position_stack(vjust = 0.5),
+    size = 2.25, color = "white"
+  )
+
+
+# Plot WW citywide --------------------------------------------------------
+
 
   # check for multiple samples per week
   # ww_collapsed |>
@@ -451,7 +485,7 @@ p_RAxCity <- ww_citywide_weighted_complete |>
 
 p_RAxCity
 
-ggsave("../figures/p_RAxCity.jpg", p_RAxCity)
+# ggsave("../figures/p_RAxCity.jpg", p_RAxCity)
 
 ### 
 
