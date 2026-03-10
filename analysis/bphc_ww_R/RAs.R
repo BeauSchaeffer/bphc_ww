@@ -369,11 +369,11 @@ ww_collapsed_complete |>
          year_epiweek=as.numeric(year_epiweek)) |> 
   left_join(conc_wts, by=c("LOCATION", "year_epiweek")) |> 
   mutate(abundance_LEwtd = abundance*logeff,
-         abundance_Ewtd = abundance*meaneffCopiesL) |> 
+         abundance_Ewtd = abundance*meaneffCopiesL) |>
   
   ggplot(aes(x = time, y = abundance_Ewtd, fill = sublin_collapse)) +
   geom_col() +
-  facet_wrap(~ LOCATION, scales = "free_y") +
+  facet_wrap(~ LOCATION) +
   scale_x_discrete(drop = FALSE) +  # keep empty weeks
   labs(
     x = "year_epiweek", y = "Absolute-ish Abundance", fill = "sublineage",
