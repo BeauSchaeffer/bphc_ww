@@ -22,7 +22,7 @@ bed_file="reference/V4.1/SARS-CoV-2.primer.bed"
 temp_prefix="aligned/${sample}.ivar_trimmed"
 
 # make output and log directories if they don't exist
-mkdir -p aligned logs
+mkdir -p aligned logs coverage
 
 echo "Running iVar trim on $sample..."
 
@@ -38,6 +38,9 @@ ivar trim \
 # sort and index with samtools
 samtools sort -@ 4 -o "$out_bam" "${temp_prefix}.bam"
 samtools index "$out_bam"
+
+# record coverage depth at each site
+samtools depth -a -d 0 "$out_bam" > "coverage/${sample}.depth.tsv"
 
 # remove temporary file
 rm "${temp_prefix}.bam"
