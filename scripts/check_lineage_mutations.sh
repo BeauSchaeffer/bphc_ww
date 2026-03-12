@@ -1,19 +1,27 @@
 #!/bin/bash
 # check_lineage_mutations.sh
-# Usage: bash check_lineage_mutations.sh <lineage> <variants_file>
+# Usage: bash check_lineage_mutations.sh <lineage> <variants_file> <depths_file>
+# Example: bash check_lineage_mutations.sh BA.5 freyja_variants/63135871_variants.tsv freyja_variants/63135871_depths.tsv
 
 BARCODES="/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/freyja/lib/python3.11/site-packages/freyja/data/usher_barcodes.csv"
 
-if [ $# -ne 2 ]; then
-    echo "Usage: bash check_lineage_mutations.sh <lineage> <variants_file>"
+if [ $# -ne 3 ]; then
+    echo "Usage: bash check_lineage_mutations.sh <lineage> <variants_file> <depths_file>"
+    echo "Example: bash check_lineage_mutations.sh BA.5 freyja_variants/63135871_variants.tsv freyja_variants/63135871_depths.tsv"
     exit 1
 fi
 
 LINEAGE=$1
 VARIANTS=$2
+DEPTHS=$3
 
 if [ ! -f "$VARIANTS" ]; then
     echo "Error: variants file not found: $VARIANTS"
+    exit 1
+fi
+
+if [ ! -f "$DEPTHS" ]; then
+    echo "Error: depths file not found: $DEPTHS"
     exit 1
 fi
 
@@ -35,17 +43,18 @@ FOUND_FILE=$(mktemp /tmp/found_muts.XXXX)
 MISSING_FILE=$(mktemp /tmp/missing_muts.XXXX)
 
 while read mut; do
-    # extract position (numeric part) and alt allele (trailing letters/symbols)
     pos=$(echo "$mut" | grep -oP '\d+')
     alt=$(echo "$mut" | grep -oP '[A-Z-]+$')
 
-    # exact match on position (col 2) and alt allele (col 4)
     match=$(awk -F'\t' -v p="$pos" -v a="$alt" 'NR>1 && $2==p && $4==a {print}' $VARIANTS)
 
     if [ -n "$match" ]; then
         echo "$mut"$'\t'"$match" >> $FOUND_FILE
     else
-        echo "$mut" >> $MISSING_FILE
+        # look up depth at missing position
+        depth=$(awk -F'\t' -v p="$pos" '$2==p {print $4}' $DEPTHS)
+        depth=${depth:-0}
+        echo "$mut"$'\t'"$depth" >> $MISSING_FILE
     fi
 done < $MUT_FILE
 
@@ -72,9 +81,10 @@ else
 fi
 
 echo ""
-echo "--- Missing mutations ---"
+echo "--- Missing mutations (MUT | DEPTH_AT_SITE) ---"
 if [ -s "$MISSING_FILE" ]; then
-    cat $MISSING_FILE
+    awk -F'\t' 'BEGIN {printf "%-12s %-10s\n", "MUT", "DEPTH"}
+                {printf "%-12s %-10s\n", $1, $2}' $MISSING_FILE
 else
     echo "All defining mutations detected"
 fi
