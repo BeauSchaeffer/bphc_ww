@@ -1,21 +1,17 @@
 #!/bin/bash
 # check_lineage_mutations.sh
 # Usage: bash check_lineage_mutations.sh <lineage> <variants_file>
-# Example: bash check_lineage_mutations.sh BA.5 freyja_variants/60975000_variants.tsv
 
 BARCODES="/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/freyja/lib/python3.11/site-packages/freyja/data/usher_barcodes.csv"
 
-# --- input handling ---
 if [ $# -ne 2 ]; then
     echo "Usage: bash check_lineage_mutations.sh <lineage> <variants_file>"
-    echo "Example: bash check_lineage_mutations.sh BA.5 freyja_variants/60975000_variants.tsv"
     exit 1
 fi
 
 LINEAGE=$1
 VARIANTS=$2
 
-# --- validate inputs ---
 if [ ! -f "$VARIANTS" ]; then
     echo "Error: variants file not found: $VARIANTS"
     exit 1
@@ -26,7 +22,7 @@ if ! grep -q "^${LINEAGE}," $BARCODES; then
     exit 1
 fi
 
-# --- extract defining mutations ---
+# extract defining mutations
 MUT_FILE=$(mktemp /tmp/lineage_muts.XXXX)
 grep "^${LINEAGE}," $BARCODES | tr ',' '\n' | \
     paste - <(head -1 $BARCODES | tr ',' '\n') | \
@@ -34,26 +30,28 @@ grep "^${LINEAGE}," $BARCODES | tr ',' '\n' | \
 
 TOTAL_DEFINING=$(wc -l < $MUT_FILE)
 
-# --- reconstruct mutation format from variants file and find matches ---
+# parse each defining mutation and do exact position + allele matching
 FOUND_FILE=$(mktemp /tmp/found_muts.XXXX)
-awk 'NR>1 {mut=$3$2$4; print mut"\t"$0}' $VARIANTS | \
-    grep -Ff $MUT_FILE | \
-    cut -f2- > $FOUND_FILE
-
-TOTAL_FOUND=$(wc -l < $FOUND_FILE)
-
-# --- find missing mutations ---
-FOUND_MUTS=$(awk 'NR>1 {print $3$2$4}' $VARIANTS)
 MISSING_FILE=$(mktemp /tmp/missing_muts.XXXX)
+
 while read mut; do
-    if ! echo "$FOUND_MUTS" | grep -q "^${mut}$"; then
-        echo "$mut"
+    # extract position (numeric part) and alt allele (trailing letters/symbols)
+    pos=$(echo "$mut" | grep -oP '\d+')
+    alt=$(echo "$mut" | grep -oP '[A-Z-]+$')
+
+    # exact match on position (col 2) and alt allele (col 4)
+    match=$(awk -F'\t' -v p="$pos" -v a="$alt" 'NR>1 && $2==p && $4==a {print}' $VARIANTS)
+
+    if [ -n "$match" ]; then
+        echo "$mut"$'\t'"$match" >> $FOUND_FILE
+    else
+        echo "$mut" >> $MISSING_FILE
     fi
-done < $MUT_FILE > $MISSING_FILE
+done < $MUT_FILE
 
-TOTAL_MISSING=$(wc -l < $MISSING_FILE)
+TOTAL_FOUND=$(wc -l < $FOUND_FILE 2>/dev/null || echo 0)
+TOTAL_MISSING=$(wc -l < $MISSING_FILE 2>/dev/null || echo 0)
 
-# --- output ---
 echo "========================================"
 echo " Lineage:   $LINEAGE"
 echo " Sample:    $VARIANTS"
@@ -65,21 +63,20 @@ echo "Detected in sample:             $TOTAL_FOUND / $TOTAL_DEFINING"
 echo "Not detected:                   $TOTAL_MISSING / $TOTAL_DEFINING"
 echo ""
 
-echo "--- Detected mutations (POS | REF | ALT | ALT_FREQ | ALT_DP | PASS) ---"
-if [ -s $FOUND_FILE ]; then
-    awk -F'\t' 'BEGIN {printf "%-10s %-6s %-6s %-10s %-10s %-6s\n", "POS", "REF", "ALT", "ALT_FREQ", "ALT_DP", "PASS"}
-                {printf "%-10s %-6s %-6s %-10s %-10s %-6s\n", $2, $3, $4, $11, $8, $14}' $FOUND_FILE
+echo "--- Detected mutations (MUT | POS | REF | ALT | ALT_FREQ | ALT_DP | PASS) ---"
+if [ -s "$FOUND_FILE" ]; then
+    awk -F'\t' 'BEGIN {printf "%-12s %-10s %-6s %-6s %-10s %-10s %-6s\n", "MUT", "POS", "REF", "ALT", "ALT_FREQ", "ALT_DP", "PASS"}
+                {printf "%-12s %-10s %-6s %-6s %-10s %-10s %-6s\n", $1, $3, $4, $5, $12, $9, $15}' $FOUND_FILE
 else
     echo "None detected"
 fi
 
 echo ""
 echo "--- Missing mutations ---"
-if [ -s $MISSING_FILE ]; then
+if [ -s "$MISSING_FILE" ]; then
     cat $MISSING_FILE
 else
     echo "All defining mutations detected"
 fi
 
-# --- cleanup ---
 rm -f $MUT_FILE $FOUND_FILE $MISSING_FILE
