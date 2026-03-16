@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --cpus-per-task=2
-#SBATCH --time=00:15:00
+#SBATCH --time=00:05:00
 #SBATCH -p hsph
 #SBATCH --mem=4G
 #SBATCH --job-name=coverage_qc
