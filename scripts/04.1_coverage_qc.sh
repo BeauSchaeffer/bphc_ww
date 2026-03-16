@@ -51,8 +51,11 @@ spike_avg_depth=$(awk -v s="$SPIKE_START" -v e="$SPIKE_END" \
 spike_sites_low_depth=$(awk -v s="$SPIKE_START" -v e="$SPIKE_END" \
     '$2 >= s && $2 <= e && $4 <= 10 {n++} END {print n+0}' "$depth_file")
 
+spike_frac_covered=$(awk -v s="$SPIKE_START" -v e="$SPIKE_END" \
+    '$2 >= s && $2 <= e {total++; if ($4 >= 10) n++} END {if (total > 0) printf "%.4f", n/total; else print "NA"}' "$depth_file")
+
 # write header + results to TSV
-echo -e "sample\tavg_depth\tsites_depth_lte10\ttotal_sites\tfrac_genome_cov_10x\tspike_avg_depth\tspike_sites_depth_lte10" > "$outfile"
-echo -e "${sample}\t${avg_depth}\t${sites_low_depth}\t${total_sites}\t${frac_covered}\t${spike_avg_depth}\t${spike_sites_low_depth}" >> "$outfile"
+echo -e "sample\tavg_depth\tsites_depth_lte10\ttotal_sites\tfrac_genome_cov_10x\tspike_avg_depth\tspike_sites_depth_lte10\tspike_frac_cov_10x" > "$outfile"
+echo -e "${sample}\t${avg_depth}\t${sites_low_depth}\t${total_sites}\t${frac_covered}\t${spike_avg_depth}\t${spike_sites_low_depth}\t${spike_frac_covered}" >> "$outfile"
 
 echo "Done with $sample: $outfile"
