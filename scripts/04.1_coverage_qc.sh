@@ -16,7 +16,7 @@ conda activate /n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/ivar
 sample=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" samples.txt)
 
 # define input and output paths
-depth_file="coverage/${sample}.depth.tsv"
+depth_file="freyja_variants/${sample}_depths.tsv"
 outfile="coverage/${sample}.qc.tsv"
 
 # spike gene coordinates (Wuhan-Hu-1 reference)
@@ -35,20 +35,21 @@ if [ ! -f "$depth_file" ]; then
 fi
 
 # whole genome metrics
-avg_depth=$(awk '{sum += $3; n++} END {if (n > 0) printf "%.2f", sum/n; else print "NA"}' "$depth_file")
+# depth file format: CHROM, POS, REF, DEPTH ($4)
+avg_depth=$(awk '{sum += $4; n++} END {if (n > 0) printf "%.2f", sum/n; else print "NA"}' "$depth_file")
 
-sites_low_depth=$(awk '$3 <= 10 {n++} END {print n+0}' "$depth_file")
+sites_low_depth=$(awk '$4 <= 10 {n++} END {print n+0}' "$depth_file")
 
 total_sites=$(awk 'END {print NR}' "$depth_file")
 
-frac_covered=$(awk -v total="$total_sites" '$3 >= 10 {n++} END {if (total > 0) printf "%.4f", n/total; else print "NA"}' "$depth_file")
+frac_covered=$(awk -v total="$total_sites" '$4 >= 10 {n++} END {if (total > 0) printf "%.4f", n/total; else print "NA"}' "$depth_file")
 
 # spike gene metrics
 spike_avg_depth=$(awk -v s="$SPIKE_START" -v e="$SPIKE_END" \
-    '$2 >= s && $2 <= e {sum += $3; n++} END {if (n > 0) printf "%.2f", sum/n; else print "NA"}' "$depth_file")
+    '$2 >= s && $2 <= e {sum += $4; n++} END {if (n > 0) printf "%.2f", sum/n; else print "NA"}' "$depth_file")
 
 spike_sites_low_depth=$(awk -v s="$SPIKE_START" -v e="$SPIKE_END" \
-    '$2 >= s && $2 <= e && $3 <= 10 {n++} END {print n+0}' "$depth_file")
+    '$2 >= s && $2 <= e && $4 <= 10 {n++} END {print n+0}' "$depth_file")
 
 # write header + results to TSV
 echo -e "sample\tavg_depth\tsites_depth_lte10\ttotal_sites\tfrac_genome_cov_10x\tspike_avg_depth\tspike_sites_depth_lte10" > "$outfile"
