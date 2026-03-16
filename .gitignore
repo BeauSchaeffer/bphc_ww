@@ -36,6 +36,7 @@ testing.md
 
 # analysis results
 analysis/figures/
+coverage/
 
 # sync scripts
 scripts/sync_freyja_agg.sh
