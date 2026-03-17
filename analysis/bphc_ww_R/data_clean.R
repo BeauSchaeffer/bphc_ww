@@ -17,11 +17,7 @@ ww_pcr <- read_csv("../data/pcr_final_baseload.csv")
 
 # coverage_dir <- "../../coverage/"
 # coverage <- list.files(coverage_dir, pattern = "\\.qc\\.tsv$", full.names = TRUE) |>
-#   map(function(f) {
-#     fastq_id <- str_extract(basename(f), "^[0-9]+")
-#     read_tsv(f, show_col_types = FALSE) |>
-#       mutate(FASTQ_ID = fastq_id)
-#   }) |>
+#   map(read_tsv, show_col_types = FALSE) |>
 #   list_rbind()
 # coverage <- coverage |> mutate(sample=as.character(sample))
 # 
