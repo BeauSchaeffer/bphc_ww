@@ -82,6 +82,14 @@ sublineages.final <- sublineages.final %>%
 sublin_meta <- left_join(sublineages.final, ww_metadata, by=c("Sample"="FASTQ_ID")) |> 
   mutate(abundance=as.numeric(abundance))
 
+    # sublin_meta$spike_frac_cov_10x |> hist()
+    # sublin_meta$frac_genome_cov_10x |> hist()
+
+### Apply QC filters at this stage
+
+sublin_meta <- sublin_meta |> 
+  filter(spike_frac_cov_10x >= 0.75)
+
 
 # Demix progress report ---------------------------------------------------
 
