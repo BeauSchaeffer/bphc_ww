@@ -15,6 +15,21 @@ clin_lin <- read_tsv("../data/var_surv_less_filt.tsv")
 
 ww_pcr <- read_csv("../data/pcr_final_baseload.csv")
 
+# coverage_dir <- "../../coverage/"
+# coverage <- list.files(coverage_dir, pattern = "\\.qc\\.tsv$", full.names = TRUE) |>
+#   map(function(f) {
+#     fastq_id <- str_extract(basename(f), "^[0-9]+")
+#     read_tsv(f, show_col_types = FALSE) |>
+#       mutate(FASTQ_ID = fastq_id)
+#   }) |>
+#   list_rbind()
+# coverage <- coverage |> mutate(sample=as.character(sample))
+# 
+# write_rds(coverage, "../data/coverage.rds") # 2026-03-17
+# rm(coverage_dir, coverage)
+
+coverage_qc <- readRDS("../data/coverage.rds")
+
 
 # Wastewater metadata -----------------------------------------------------
 
@@ -121,7 +136,36 @@ p_counts
   # check PCR folder
   # link with KIT ID
 
-# write_rds(ww_metadata, "../data/meta_clean.rds") # 2026-02-11
+### join with QC data
+
+ww_metadata <- ww_metadata |> 
+  left_join(coverage_qc, by=c("FASTQ_ID"="sample"))
+
+# write_rds(ww_metadata, "../data/meta_clean.rds") # 2026-03-17
+
+  # check which have failed QC
+
+ww_metadata |>
+  arrange(year_epiweek, LOCATION) |>
+  mutate(year_epiweek = factor(year_epiweek)) |>
+  mutate(QC_ov_depth10 = ifelse(frac_genome_cov_10x < 0.75, 1,0),
+         QC_spk_depth10 = ifelse(spike_frac_cov_10x < 0.75, 1,0),
+         fail_either75 = case_when(
+           QC_ov_depth10 + QC_spk_depth10 > 1 ~ 1,
+           QC_ov_depth10 + QC_spk_depth10 <= 1 ~ 0
+         )) |> 
+  drop_na(QC_ov_depth10) |> 
+  ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(fail_either75))) +
+  geom_tile() +
+  geom_text(aes(label=round(spike_frac_cov_10x, digits = 2))) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = c("lightgreen", "red"), name="fail either\n 75% @ 10x ?") +
+  ggtitle("QC report", subtitle = "labels: spike coverage > 10x")
+
+ww_metadata |> 
+  select(frac_genome_cov_10x, spike_frac_cov_10x) |> 
+  plot() # pretty correlated
 
 
 # Clinical data from GISAID -----------------------------------------------
@@ -201,8 +245,7 @@ conc_wts <- ww_pcr |>
   mutate(logeff = log(meaneffCopiesL),
          lograw = log(meanrawCopiesL))
 
-write_rds(conc_wts, "../data/conc_wts.rds") # 2026-03-09
-
+# write_rds(conc_wts, "../data/conc_wts.rds") # 2026-03-09
 
 
 
