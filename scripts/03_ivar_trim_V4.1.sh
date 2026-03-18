@@ -39,9 +39,6 @@ ivar trim \
 samtools sort -@ 4 -o "$out_bam" "${temp_prefix}.bam"
 samtools index "$out_bam"
 
-# record coverage depth at each site
-samtools depth -a -d 0 "$out_bam" > "coverage/${sample}.depth.tsv"
-
 # remove temporary file
 rm "${temp_prefix}.bam"
 
