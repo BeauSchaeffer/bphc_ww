@@ -6,7 +6,7 @@
 #SBATCH --job-name=coverage_qc
 #SBATCH --output=logs/coverage_qc_%A_%a.out
 #SBATCH --error=logs/coverage_qc_%A_%a.err
-#SBATCH --array=0-49   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
+#SBATCH --array=0-315   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
 
 # load Conda and activate local environment
 source ~/.bashrc

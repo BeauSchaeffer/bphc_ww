@@ -6,7 +6,7 @@
 #SBATCH --job-name=freyja_demix
 #SBATCH --output=logs/freyja_demix_%A_%a.out
 #SBATCH --error=logs/freyja_demix_%A_%a.err
-#SBATCH --array=0-49   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
+#SBATCH --array=0-315   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
 
 # load Conda and activate local environment
 source ~/.bashrc
