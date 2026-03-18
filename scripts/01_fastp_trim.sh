@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --cpus-per-task=4
-#SBATCH --time=01:00:00
+#SBATCH --time=00:20:00
 #SBATCH -p hsph
 #SBATCH --mem=4G
 #SBATCH --job-name=fastp_trim
