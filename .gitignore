@@ -41,6 +41,9 @@ coverage/
 # sync scripts
 scripts/sync_freyja_agg.sh
 
+# exploratory scripts
+analysis/bphc_ww_R/meta_exp.R
+
 # RETAIN select files
 !scripts/
 !reference/
