@@ -47,8 +47,11 @@ scripts/sync_freyja_agg.sh
 # exploratory scripts
 analysis/bphc_ww_R/meta_exp.R
 
-# notebook
+# notes
 notebook.md
+samples_original.txt
+samples_clean.txt
+bad_samples.txt
 
 # RETAIN select files
 !scripts/
