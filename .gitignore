@@ -44,6 +44,9 @@ scripts/sync_freyja_agg.sh
 # exploratory scripts
 analysis/bphc_ww_R/meta_exp.R
 
+# notebook
+notebook.md
+
 # RETAIN select files
 !scripts/
 !reference/
