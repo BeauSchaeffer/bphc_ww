@@ -9,6 +9,7 @@ freyja_aggregate/
 logs/
 env/
 samples.txt
+samples_clean.txt
 samples_original.txt
 bad_samples.txt
 testing.md
