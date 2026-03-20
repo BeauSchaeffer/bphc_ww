@@ -6,7 +6,7 @@
 #SBATCH --job-name=bt2_align
 #SBATCH --output=logs/bt2_align_%A_%a.out
 #SBATCH --error=logs/bt2_align_%A_%a.err
-#SBATCH --array=70,78,90,101,96,103,105,115,113,122   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
+#SBATCH --array=68,70,78,90,96,101,102,103,105,111,113,115,122   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
 
 # load Conda and activate local environment
 source ~/.bashrc
