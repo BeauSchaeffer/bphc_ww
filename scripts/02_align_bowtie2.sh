@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH --cpus-per-task=4
-#SBATCH --time=00:20:00
+#SBATCH --time=00:45:00
 #SBATCH -p hsph
 #SBATCH --mem=8G
 #SBATCH --job-name=bt2_align
 #SBATCH --output=logs/bt2_align_%A_%a.out
 #SBATCH --error=logs/bt2_align_%A_%a.err
-#SBATCH --array=0-304   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
+#SBATCH --array=70,78,90,101,96,103,105,115,113,122   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
 
 # load Conda and activate local environment
 source ~/.bashrc
