@@ -27,6 +27,11 @@ mkdir -p aligned logs
 
 echo "Aligning $sample..."
 
+# clean up any leftover temp files and partial outputs from previous runs
+rm -f aligned/${sample}.sorted.bam.tmp.*.bam
+rm -f aligned/${sample}.sorted.bam
+rm -f aligned/${sample}.sorted.bam.bai
+
 # align with Bowtie2 and process to BAM
   # -bS = input SAM, output BAM
   # -@ 4 = 4 threads to match above
