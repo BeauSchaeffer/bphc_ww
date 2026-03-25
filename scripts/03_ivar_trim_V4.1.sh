@@ -20,6 +20,8 @@ in_bam="aligned/${sample}.sorted.bam"
 out_bam="aligned/${sample}.trimmed.bam"
 bed_file="reference/V4.1/SARS-CoV-2.primer.bed"
 temp_prefix="aligned/${sample}.ivar_trimmed"
+# remove temp files if job fails mid-run or at end of script
+trap "rm -f ${temp_prefix}.bam" EXIT
 
 # make output and log directories if they don't exist
 mkdir -p aligned logs coverage
@@ -42,8 +44,5 @@ ivar trim \
 # sort and index with samtools
 samtools sort -@ 4 -o "$out_bam" "${temp_prefix}.bam"
 samtools index "$out_bam"
-
-# remove temporary file
-rm "${temp_prefix}.bam"
 
 echo "Done with $sample"
