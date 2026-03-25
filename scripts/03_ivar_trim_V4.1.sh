@@ -6,7 +6,7 @@
 #SBATCH --job-name=ivar_trim
 #SBATCH --output=logs/ivar_trim_%A_%a.out
 #SBATCH --error=logs/ivar_trim_%A_%a.err
-#SBATCH --array=0-315   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
+#SBATCH --array=0-304   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
 
 # load Conda and activate local environment
 source ~/.bashrc
@@ -28,12 +28,16 @@ echo "Running iVar trim on $sample..."
 
 # post-alignment trim with iVar
 # produces: aligned/${sample}.ivar_trimmed.bam - temporary file
-  # -e = exclude untrimmed reads
+# omitting -e flag: retain untrimmed reads
+# -q 20: min base quality score
+# -m 30: min read length post-trim
+
 ivar trim \
   -i "$in_bam" \
   -b "$bed_file" \
   -p "$temp_prefix" \
-  -e
+  -q 20 \
+  -m 30
 
 # sort and index with samtools
 samtools sort -@ 4 -o "$out_bam" "${temp_prefix}.bam"
