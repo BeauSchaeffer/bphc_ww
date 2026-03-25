@@ -30,16 +30,14 @@ echo "Running iVar trim on $sample..."
 
 # post-alignment trim with iVar
 # produces: aligned/${sample}.ivar_trimmed.bam - temporary file
-# omitting -e flag: retain untrimmed reads
-# -q 20: min base quality score
-# -m 30: min read length post-trim
+# -e flag: include reads with no primers
 
 ivar trim \
   -i "$in_bam" \
   -b "$bed_file" \
   -p "$temp_prefix" \
   -q 20 \
-  -m 30
+  -e
 
 # sort and index with samtools
 samtools sort -@ 4 -o "$out_bam" "${temp_prefix}.bam"
