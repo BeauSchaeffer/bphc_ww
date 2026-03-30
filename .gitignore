@@ -8,6 +8,7 @@ freyja_demix/
 freyja_aggregate/
 logs/
 env/
+holding/
 samples.txt
 samples_clean.txt
 samples_original.txt
