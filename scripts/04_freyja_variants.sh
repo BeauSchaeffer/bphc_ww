@@ -2,7 +2,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --time=00:30:00
 #SBATCH -p hsph
-#SBATCH --mem=8G
+#SBATCH --mem=32G
 #SBATCH --job-name=freyja_variants
 #SBATCH --output=logs/freyja_vars_%A_%a.out
 #SBATCH --error=logs/freyja_vars_%A_%a.err
