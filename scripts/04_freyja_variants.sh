@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=1
 #SBATCH --time=00:30:00
 #SBATCH -p hsph
-#SBATCH --mem=6G
+#SBATCH --mem=8G
 #SBATCH --job-name=freyja_variants
 #SBATCH --output=logs/freyja_vars_%A_%a.out
 #SBATCH --error=logs/freyja_vars_%A_%a.err
-#SBATCH --array=0-315   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
+#SBATCH --array=0-304   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
 
 # load Conda and activate local environment
 source ~/.bashrc
