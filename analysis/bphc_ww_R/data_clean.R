@@ -21,7 +21,7 @@ ww_pcr <- read_csv("../data/pcr_final_baseload.csv")
 #   list_rbind()
 # coverage <- coverage |> mutate(sample=as.character(sample))
 # 
-# write_rds(coverage, "../data/coverage.rds") # 2026-03-17
+# write_rds(coverage, "../data/coverage.rds") # 2026-03-31
 # rm(coverage_dir, coverage)
 
 
@@ -152,13 +152,13 @@ ww_metadata |>
            QC_ov_depth10 + QC_spk_depth10 <= 1 ~ 0
          )) |> 
   drop_na(QC_ov_depth10) |> 
-  ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(fail_either75))) +
+  ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(QC_spk_depth10))) +
   geom_tile() +
   geom_text(aes(label=round(spike_frac_cov_10x, digits = 2))) +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_fill_manual(values = c("lightgreen", "red"), name="fail either\n 75% @ 10x ?") +
-  ggtitle("QC report", subtitle = "labels: spike coverage > 10x")
+  scale_fill_manual(values = c("lightgreen", "red"), name="fail spike\n 75% @ 10x ?") +
+  ggtitle("QC report", subtitle = "labels = spike coverage > 10x")
 
 ww_metadata |> 
   select(frac_genome_cov_10x, spike_frac_cov_10x) |> 
