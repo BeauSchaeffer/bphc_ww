@@ -87,8 +87,18 @@ sublin_meta <- left_join(sublineages.final, ww_metadata, by=c("Sample"="FASTQ_ID
 
 ### Apply QC filters at this stage
 
-sublin_meta <- sublin_meta |> 
-  filter(spike_frac_cov_10x >= 0.75)
+# sublin_meta <- sublin_meta |> 
+#   filter(spike_frac_cov_10x >= 0.75)
+
+qc_flags_nb <- ww_metadata |>
+  mutate(time = as.character(year_epiweek),
+         low_qc = frac_genome_cov_10x < 0.5 | is.na(frac_genome_cov_10x)) |>
+  group_by(LOCATION, time) |>
+  summarise(low_qc = any(low_qc), .groups = "drop")
+
+qc_flags_city <- qc_flags_nb |>
+  group_by(time) |>
+  summarise(low_qc = any(low_qc), .groups = "drop")
 
 
 # Demix progress report ---------------------------------------------------
@@ -347,6 +357,12 @@ ww_collapsed_complete <- ww_collapsed_complete |>
 p_RAxNB <- ww_collapsed_complete |>
   ggplot(aes(x = time, y = abundance, fill = sublin_collapse)) +
   geom_col() +
+  geom_col(
+    data = qc_flags_nb |> filter(low_qc),
+    aes(x = time, y = 1),
+    fill = "grey40", alpha = 0.4,
+    inherit.aes = FALSE
+  ) +
   facet_wrap(~ LOCATION, scales = "free_y") +
   scale_x_discrete(drop = FALSE) +  # keep empty weeks
   labs(
@@ -476,6 +492,12 @@ ww_citywide_weighted_complete <- ww_citywide_weighted |>
 p_RAxCity <- ww_citywide_weighted_complete |>
   ggplot(aes(x = time, y = abundance, fill = sublin_collapse)) +
   geom_col() +
+  geom_col(
+    data = qc_flags_city |> filter(low_qc),
+    aes(x = time, y = 1),
+    fill = "grey40", alpha = 0.4,
+    inherit.aes = FALSE
+  ) +
   scale_x_discrete(drop = FALSE) +
   labs(
     x = "year_epiweek", y = "Relative Abundance", fill = "sublineage",
