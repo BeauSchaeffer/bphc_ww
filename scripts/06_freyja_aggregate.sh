@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --cpus-per-task=2
+#SBATCH --cpus-per-task=1
 #SBATCH --time=00:05:00
 #SBATCH -p hsph
 #SBATCH --mem=4G
