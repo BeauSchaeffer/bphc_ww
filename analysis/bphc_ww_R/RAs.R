@@ -389,143 +389,143 @@ p_RAxNB
 # ggsave("../figures/p_RAxNB.jpg", p_RAxNB, scale=1.5)
 
 
-### concentration weighted
-
-ww_collapsed_complete |> 
-  mutate(year_epiweek = paste0(year, sprintf("%02d", epiweek)),
-         year_epiweek = ifelse(year_epiweek=="NANA",NA,year_epiweek),
-         year_epiweek=as.numeric(year_epiweek)) |> 
-  left_join(conc_wts, by=c("LOCATION", "year_epiweek")) |> 
-  mutate(abundance_LEwtd = abundance*logeff,
-         abundance_Ewtd = abundance*meaneffCopiesL) |>
-  
-  ggplot(aes(x = time, y = abundance_Ewtd, fill = sublin_collapse)) +
-  geom_col() +
-  facet_wrap(~ LOCATION) +
-  scale_x_discrete(drop = FALSE) +  # keep empty weeks
-  labs(
-    x = "year_epiweek", y = "Absolute-ish Abundance", fill = "sublineage",
-    title = "SARS-CoV-2 Weekly Lineage Composition - Wastewater"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    panel.spacing = unit(0.75, "lines")
-  ) +
-  scale_fill_manual(values = fill_cols, drop = FALSE) +
-  geom_text(
-    aes(label = ifelse(abundance > 0.05, as.character(sublin_collapse), "")),
-    position = position_stack(vjust = 0.5),
-    size = 2.25, color = "white"
-  )
-
-
-# Plot WW citywide --------------------------------------------------------
-
-
-# check for multiple samples per week
-# ww_collapsed |>
-#   count(time, LOCATION, sublin_collapse) |>
-#   summarise(max_dups = max(n))
-
-ww_locweek <- ww_collapsed |>
-  # only needed if multiple samples/week somewhere
-  # group_by(time, LOCATION, sublin_collapse) |>
-  # summarise(abundance = mean(abundance, na.rm = TRUE), .groups = "drop") |>
-  mutate(sublin_collapse = factor(sublin_collapse, levels = lin_levels),
-         time = as.character(time))
-
-# for every time,location pair
-# create rows for every sublin_collapse in lin_levels
-# abundance set to 0 for missing lin_levels
-ww_locweek_complete <- ww_locweek |>
-  tidyr::complete(
-    # nesting - only expand lineages within time-location pairs that already exist in the data.
-    tidyr::nesting(time, LOCATION),
-    sublin_collapse = factor(lin_levels, levels = lin_levels),
-    fill = list(abundance = 0)
-  )
-
-# within-neighborhood, within-week renormalization
-# ensures RAs sum exactly to 1 before weighting
-# probably unnecessary but freyja outputs can sometimes fail to sum to 1
-ww_locweek_complete <- ww_locweek_complete |>
-  group_by(time, LOCATION) |>
-  mutate(
-    denom = sum(abundance, na.rm = TRUE),
-    abundance = dplyr::if_else(denom > 0, abundance / denom, NA_real_)
-  ) |> 
-  select(-denom) |>
-  ungroup()
-
-ww_citywide_weighted <- ww_locweek_complete |>
-  left_join(pop_wts |> select(LOCATION, pop), by = "LOCATION") |>
-  group_by(time, sublin_collapse) |>
-  summarise(
-    abundance = sum(pop * abundance, na.rm = TRUE) / sum(pop, na.rm = TRUE),
-    pop_covered = sum(pop, na.rm = TRUE),
-    n_locations = n_distinct(LOCATION),
-    .groups = "drop"
-  ) |>
-  mutate(
-    time = as.numeric(time),
-    LOCATION = "WW_citywide_weighted",
-    sublin_collapse = factor(sublin_collapse, levels = lin_levels)
-  )
-
-# checks
-ww_citywide_weighted |>
-  group_by(time) |>
-  summarise(sum_abundance = sum(abundance), .groups = "drop") |>
-  summarise(min = min(sum_abundance), max = max(sum_abundance))
-
-# complete data for plotting
-ww_citywide_weighted_complete <- ww_citywide_weighted |>
-  mutate(time = as.character(time)) |>
-  tidyr::complete(
-    time = year_epiweek_levels,
-    sublin_collapse = factor(lin_levels, levels = lin_levels),
-    fill = list(abundance = 0, pop_covered = NA_real_, n_locations = NA_integer_, LOCATION = "WW_citywide_weighted")
-  ) |>
-  mutate(
-    time = factor(time, levels = year_epiweek_levels),
-    sublin_collapse = factor(sublin_collapse, levels = lin_levels)
-  )
-
-
-p_RAxCity <- ww_citywide_weighted_complete |>
-  ggplot(aes(x = time, y = abundance, fill = sublin_collapse)) +
-  geom_col() +
-  geom_col(
-    data = qc_flags_city |> filter(low_qc),
-    aes(x = time, y = 1),
-    fill = "grey40", alpha = 0.4,
-    inherit.aes = FALSE
-  ) +
-  scale_x_discrete(drop = FALSE) +
-  labs(
-    x = "year_epiweek", y = "Relative Abundance", fill = "sublineage",
-    title = "SARS-CoV-2 Weekly Lineage Composition - Wastewater Citywide",
-    subtitle = "population weighted"
-  ) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_fill_manual(values = fill_cols, drop = FALSE) +
-  geom_text(
-    aes(label = ifelse(abundance > 0.05, as.character(sublin_collapse), "")),
-    position = position_stack(vjust = 0.5),
-    size = 2.25, color = "white"
-  )
-
-p_RAxCity
-
-# ggsave("../figures/p_RAxCity.jpg", p_RAxCity)
-
-### 
-
-p_RAxClin
-p_RAxNB
-p_RAxCity
+# ### concentration weighted
+# 
+# ww_collapsed_complete |> 
+#   mutate(year_epiweek = paste0(year, sprintf("%02d", epiweek)),
+#          year_epiweek = ifelse(year_epiweek=="NANA",NA,year_epiweek),
+#          year_epiweek=as.numeric(year_epiweek)) |> 
+#   left_join(conc_wts, by=c("LOCATION", "year_epiweek")) |> 
+#   mutate(abundance_LEwtd = abundance*logeff,
+#          abundance_Ewtd = abundance*meaneffCopiesL) |>
+#   
+#   ggplot(aes(x = time, y = abundance_Ewtd, fill = sublin_collapse)) +
+#   geom_col() +
+#   facet_wrap(~ LOCATION) +
+#   scale_x_discrete(drop = FALSE) +  # keep empty weeks
+#   labs(
+#     x = "year_epiweek", y = "Absolute-ish Abundance", fill = "sublineage",
+#     title = "SARS-CoV-2 Weekly Lineage Composition - Wastewater"
+#   ) +
+#   theme_minimal() +
+#   theme(
+#     axis.text.x = element_text(angle = 45, hjust = 1),
+#     panel.spacing = unit(0.75, "lines")
+#   ) +
+#   scale_fill_manual(values = fill_cols, drop = FALSE) +
+#   geom_text(
+#     aes(label = ifelse(abundance > 0.05, as.character(sublin_collapse), "")),
+#     position = position_stack(vjust = 0.5),
+#     size = 2.25, color = "white"
+#   )
+# 
+# 
+# # Plot WW citywide --------------------------------------------------------
+# 
+# 
+# # check for multiple samples per week
+# # ww_collapsed |>
+# #   count(time, LOCATION, sublin_collapse) |>
+# #   summarise(max_dups = max(n))
+# 
+# ww_locweek <- ww_collapsed |>
+#   # only needed if multiple samples/week somewhere
+#   # group_by(time, LOCATION, sublin_collapse) |>
+#   # summarise(abundance = mean(abundance, na.rm = TRUE), .groups = "drop") |>
+#   mutate(sublin_collapse = factor(sublin_collapse, levels = lin_levels),
+#          time = as.character(time))
+# 
+# # for every time,location pair
+# # create rows for every sublin_collapse in lin_levels
+# # abundance set to 0 for missing lin_levels
+# ww_locweek_complete <- ww_locweek |>
+#   tidyr::complete(
+#     # nesting - only expand lineages within time-location pairs that already exist in the data.
+#     tidyr::nesting(time, LOCATION),
+#     sublin_collapse = factor(lin_levels, levels = lin_levels),
+#     fill = list(abundance = 0)
+#   )
+# 
+# # within-neighborhood, within-week renormalization
+# # ensures RAs sum exactly to 1 before weighting
+# # probably unnecessary but freyja outputs can sometimes fail to sum to 1
+# ww_locweek_complete <- ww_locweek_complete |>
+#   group_by(time, LOCATION) |>
+#   mutate(
+#     denom = sum(abundance, na.rm = TRUE),
+#     abundance = dplyr::if_else(denom > 0, abundance / denom, NA_real_)
+#   ) |> 
+#   select(-denom) |>
+#   ungroup()
+# 
+# ww_citywide_weighted <- ww_locweek_complete |>
+#   left_join(pop_wts |> select(LOCATION, pop), by = "LOCATION") |>
+#   group_by(time, sublin_collapse) |>
+#   summarise(
+#     abundance = sum(pop * abundance, na.rm = TRUE) / sum(pop, na.rm = TRUE),
+#     pop_covered = sum(pop, na.rm = TRUE),
+#     n_locations = n_distinct(LOCATION),
+#     .groups = "drop"
+#   ) |>
+#   mutate(
+#     time = as.numeric(time),
+#     LOCATION = "WW_citywide_weighted",
+#     sublin_collapse = factor(sublin_collapse, levels = lin_levels)
+#   )
+# 
+# # checks
+# ww_citywide_weighted |>
+#   group_by(time) |>
+#   summarise(sum_abundance = sum(abundance), .groups = "drop") |>
+#   summarise(min = min(sum_abundance), max = max(sum_abundance))
+# 
+# # complete data for plotting
+# ww_citywide_weighted_complete <- ww_citywide_weighted |>
+#   mutate(time = as.character(time)) |>
+#   tidyr::complete(
+#     time = year_epiweek_levels,
+#     sublin_collapse = factor(lin_levels, levels = lin_levels),
+#     fill = list(abundance = 0, pop_covered = NA_real_, n_locations = NA_integer_, LOCATION = "WW_citywide_weighted")
+#   ) |>
+#   mutate(
+#     time = factor(time, levels = year_epiweek_levels),
+#     sublin_collapse = factor(sublin_collapse, levels = lin_levels)
+#   )
+# 
+# 
+# p_RAxCity <- ww_citywide_weighted_complete |>
+#   ggplot(aes(x = time, y = abundance, fill = sublin_collapse)) +
+#   geom_col() +
+#   geom_col(
+#     data = qc_flags_city |> filter(low_qc),
+#     aes(x = time, y = 1),
+#     fill = "grey40", alpha = 0.4,
+#     inherit.aes = FALSE
+#   ) +
+#   scale_x_discrete(drop = FALSE) +
+#   labs(
+#     x = "year_epiweek", y = "Relative Abundance", fill = "sublineage",
+#     title = "SARS-CoV-2 Weekly Lineage Composition - Wastewater Citywide",
+#     subtitle = "population weighted"
+#   ) +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   scale_fill_manual(values = fill_cols, drop = FALSE) +
+#   geom_text(
+#     aes(label = ifelse(abundance > 0.05, as.character(sublin_collapse), "")),
+#     position = position_stack(vjust = 0.5),
+#     size = 2.25, color = "white"
+#   )
+# 
+# p_RAxCity
+# 
+# # ggsave("../figures/p_RAxCity.jpg", p_RAxCity)
+# 
+# ### 
+# 
+# p_RAxClin
+# p_RAxNB
+# p_RAxCity
 
 
 
