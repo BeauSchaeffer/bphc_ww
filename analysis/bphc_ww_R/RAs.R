@@ -90,11 +90,13 @@ sublin_meta <- left_join(sublineages.final, ww_metadata, by=c("Sample"="FASTQ_ID
 # sublin_meta <- sublin_meta |> 
 #   filter(spike_frac_cov_10x >= 0.75)
 
+
+
 qc_flags_nb <- ww_metadata |>
   mutate(time = as.character(year_epiweek),
-         low_qc = frac_genome_cov_10x < 0.5 | is.na(frac_genome_cov_10x)) |>
+         low_spike_qc = spike_frac_cov_10x < 0.5 | is.na(spike_frac_cov_10x)) |>
   group_by(LOCATION, time) |>
-  summarise(low_qc = any(low_qc), .groups = "drop")
+  summarise(low_spike_qc = any(low_spike_qc), .groups = "drop")
 
 qc_flags_city <- qc_flags_nb |>
   group_by(time) |>
