@@ -1,6 +1,8 @@
 # Visualizing relative abundances
 
+
 # Libraries ---------------------------------------------------------------
+
 
 library(data.table)
 library(tidyverse)
@@ -11,13 +13,16 @@ library(viridis)
 
 # Load data ---------------------------------------------------------------
 
-ww_metadata <- read_rds("../data/meta_clean.rds")
+storage_dir <- "/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/data/"
 
-clin_lin <- read_rds("../data/clin_lin.rds")
 
-pop_wts <- read_rds("../data/pop_wts.rds")
+ww_metadata <- read_rds(paste0(storage_dir, "meta_clean.rds"))
 
-conc_wts <- read_rds("../data/conc_wts.rds")
+clin_lin <- read_rds(paste0(storage_dir,"clin_lin.rds"))
+
+pop_wts <- read_rds(paste0(storage_dir,"pop_wts.rds"))
+
+conc_wts <- read_rds(paste0(storage_dir,"conc_wts.rds"))
 
 
 # Parse demix -------------------------------------------------------------
@@ -25,7 +30,7 @@ conc_wts <- read_rds("../data/conc_wts.rds")
 
 ### Code credit for parsing the demix output: https://github.com/a-roguet
 
-results<-read.table("../../freyja_aggregate/aggregated.tsv", fill = TRUE, sep = "\t", h=T)
+results<-read.table("/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/freyja_aggregate/aggregated.tsv", fill = TRUE, sep = "\t", h=T)
 results<-as.data.frame(sapply(results, function(x) str_replace_all(x, "[',()\\]\\[]", ""))) # Removed the unwanted character: [], () and commas
 results<-as.data.frame(sapply(results, function(x) trimws(gsub("\\s+", " ", x)))) # Removed double spaces
 
@@ -70,7 +75,7 @@ rm(abundances.temp, lineages.temp, results, summarized, summarized.final, end, i
 sublineages.final$Sample <- sub("^([0-9]+).*", "\\1", sublineages.final$Sample)
 
 ### Freyja collapse lineage option results in classifications like "BA.4.6-like" or "BA.5.2-like2"
-  ### remove "-likeN" suffix
+### remove "-likeN" suffix
 
 sublineages.final <- sublineages.final %>%
   mutate(sublineage = str_remove(as.character(sublineage), "-like[0-9]*$"))
@@ -82,8 +87,8 @@ sublineages.final <- sublineages.final %>%
 sublin_meta <- left_join(sublineages.final, ww_metadata, by=c("Sample"="FASTQ_ID")) |> 
   mutate(abundance=as.numeric(abundance))
 
-    # sublin_meta$spike_frac_cov_10x |> hist()
-    # sublin_meta$frac_genome_cov_10x |> hist()
+# sublin_meta$spike_frac_cov_10x |> hist()
+# sublin_meta$frac_genome_cov_10x |> hist()
 
 ### Apply QC filters at this stage
 
@@ -91,16 +96,13 @@ sublin_meta <- left_join(sublineages.final, ww_metadata, by=c("Sample"="FASTQ_ID
 #   filter(spike_frac_cov_10x >= 0.75)
 
 
-
 qc_flags_nb <- ww_metadata |>
   mutate(time = as.character(year_epiweek),
-         low_spike_qc = spike_frac_cov_10x < 0.5 | is.na(spike_frac_cov_10x)) |>
+         low_spike_qc = spike_frac_cov_10x <= 0.5 | is.na(spike_frac_cov_10x)) |>
   group_by(LOCATION, time) |>
   summarise(low_spike_qc = any(low_spike_qc), .groups = "drop")
 
-qc_flags_city <- qc_flags_nb |>
-  group_by(time) |>
-  summarise(low_qc = any(low_qc), .groups = "drop")
+qc_flags_nb <- qc_flags_nb |> filter(time %in% sublin_meta$year_epiweek)
 
 
 # Demix progress report ---------------------------------------------------
@@ -127,7 +129,7 @@ qc_flags_city <- qc_flags_nb |>
 
 
 ### fx - extract parent group
-  ### this fx used within keep_threshold_time()
+### this fx used within keep_threshold_time()
 
 parent_group <- function(x) {
   out <- str_extract(x, "^[A-Za-z]+\\.[0-9]+")
@@ -135,7 +137,7 @@ parent_group <- function(x) {
 }
 
 ### fx - only keep parent groups that exceed a threshold
-  ### used within collapse_sublineages_timeaware()
+### used within collapse_sublineages_timeaware()
 
 keep_threshold_time <- function(dat, threshold = 0.1, 
                                 time_col = year_epiweek,
@@ -145,7 +147,7 @@ keep_threshold_time <- function(dat, threshold = 0.1,
            # format variables
            abundance = as.numeric(abundance),
            time = {{ time_col }}
-           ) |>
+    ) |>
     # sum RA for collapsed lineages within each sample,week
     group_by(Sample, time, group) |>
     summarise(ra = sum(abundance, na.rm = TRUE), .groups = "drop") |>
@@ -167,17 +169,17 @@ keep_threshold_time <- function(dat, threshold = 0.1,
   
 }
 
-  # view keepers
-  # tholds.t <- keep_threshold_time(sublin_meta) |> arrange(group,time)
+# view keepers
+# tholds.t <- keep_threshold_time(sublin_meta) |> arrange(group,time)
 
 
 ### fx - collapse using time-aware threshold
-  # use the keep table keyed by (time, group), and collapse to "other"
-  # until keep_by_time becomes TRUE.
+# use the keep table keyed by (time, group), and collapse to "other"
+# until keep_by_time becomes TRUE.
 
-  # keep_tbl from combined data can be supplied 
-  # or
-  # keep_tbl can be computed internally 
+# keep_tbl from combined data can be supplied 
+# or
+# keep_tbl can be computed internally 
 
 collapse_sublineages_timeaware <- function(df, threshold = 0.1,
                                            other = "other",
@@ -238,10 +240,10 @@ clinical <- clin_lin |>
          Sample=NA,
          epiweek=week)
 
-  ### remove later - filter to relevant time that samples have been processed
-  clinical <- clinical |> filter(year_epiweek %in% sublin_meta$year_epiweek)
-  
-  ### pseudo variables
+### remove later - filter to relevant time that samples have been processed
+clinical <- clinical |> filter(year_epiweek %in% sublin_meta$year_epiweek)
+
+### pseudo variables
 
 clinical <- clinical |>
   mutate(
@@ -276,20 +278,20 @@ clin_collapsed <- collapse_sublineages_timeaware(clinical,
                                                  suffix = ".x",
                                                  keep_tbl = keep_tbl)
 
- # stable lineage order for all plots
+# stable lineage order for all plots
 lin_levels <- sort(unique(c(
   as.character(ww_collapsed$sublin_collapse),
   as.character(clin_collapsed$sublin_collapse)
 )))
-  # force "other" to last
+# force "other" to last
 lin_levels <- c(setdiff(lin_levels, "other"), "other")
 
-  # fixed color mapping for all lineage levels (stable across plots)
+# fixed color mapping for all lineage levels (stable across plots)
 fill_cols <- setNames(viridis::viridis(length(lin_levels), option = "turbo"),
                       lin_levels)
 
 
-  # apply ordering
+# apply ordering
 ww_collapsed  <- ww_collapsed  |> mutate(sublin_collapse = factor(sublin_collapse, levels = lin_levels))
 clin_collapsed <- clin_collapsed |> mutate(sublin_collapse = factor(sublin_collapse, levels = lin_levels))
 
@@ -360,9 +362,9 @@ p_RAxNB <- ww_collapsed_complete |>
   ggplot(aes(x = time, y = abundance, fill = sublin_collapse)) +
   geom_col() +
   geom_col(
-    data = qc_flags_nb |> filter(low_qc),
+    data = qc_flags_nb |> filter(low_spike_qc),
     aes(x = time, y = 1),
-    fill = "grey40", alpha = 0.4,
+    fill = "grey40", alpha = 1,
     inherit.aes = FALSE
   ) +
   facet_wrap(~ LOCATION, scales = "free_y") +
@@ -380,7 +382,7 @@ p_RAxNB <- ww_collapsed_complete |>
   geom_text(
     aes(label = ifelse(abundance > 0.05, as.character(sublin_collapse), "")),
     position = position_stack(vjust = 0.5),
-    size = 2.25, color = "white"
+    size = 1.5, color = "white", angle=90
   )
 
 p_RAxNB
@@ -421,10 +423,10 @@ ww_collapsed_complete |>
 # Plot WW citywide --------------------------------------------------------
 
 
-  # check for multiple samples per week
-  # ww_collapsed |>
-  #   count(time, LOCATION, sublin_collapse) |>
-  #   summarise(max_dups = max(n))
+# check for multiple samples per week
+# ww_collapsed |>
+#   count(time, LOCATION, sublin_collapse) |>
+#   summarise(max_dups = max(n))
 
 ww_locweek <- ww_collapsed |>
   # only needed if multiple samples/week somewhere
@@ -433,9 +435,9 @@ ww_locweek <- ww_collapsed |>
   mutate(sublin_collapse = factor(sublin_collapse, levels = lin_levels),
          time = as.character(time))
 
-  # for every time,location pair
-  # create rows for every sublin_collapse in lin_levels
-  # abundance set to 0 for missing lin_levels
+# for every time,location pair
+# create rows for every sublin_collapse in lin_levels
+# abundance set to 0 for missing lin_levels
 ww_locweek_complete <- ww_locweek |>
   tidyr::complete(
     # nesting - only expand lineages within time-location pairs that already exist in the data.
@@ -444,9 +446,9 @@ ww_locweek_complete <- ww_locweek |>
     fill = list(abundance = 0)
   )
 
-  # within-neighborhood, within-week renormalization
-  # ensures RAs sum exactly to 1 before weighting
-  # probably unnecessary but freyja outputs can sometimes fail to sum to 1
+# within-neighborhood, within-week renormalization
+# ensures RAs sum exactly to 1 before weighting
+# probably unnecessary but freyja outputs can sometimes fail to sum to 1
 ww_locweek_complete <- ww_locweek_complete |>
   group_by(time, LOCATION) |>
   mutate(
@@ -471,13 +473,13 @@ ww_citywide_weighted <- ww_locweek_complete |>
     sublin_collapse = factor(sublin_collapse, levels = lin_levels)
   )
 
-  # checks
+# checks
 ww_citywide_weighted |>
   group_by(time) |>
   summarise(sum_abundance = sum(abundance), .groups = "drop") |>
   summarise(min = min(sum_abundance), max = max(sum_abundance))
 
-  # complete data for plotting
+# complete data for plotting
 ww_citywide_weighted_complete <- ww_citywide_weighted |>
   mutate(time = as.character(time)) |>
   tidyr::complete(
@@ -524,6 +526,7 @@ p_RAxCity
 p_RAxClin
 p_RAxNB
 p_RAxCity
+
 
 
 

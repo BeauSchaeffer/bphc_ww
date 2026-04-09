@@ -3,17 +3,19 @@
 
 # Libraries ---------------------------------------------------------------
 
+
 library(tidyverse)
+
 
 # Load data ---------------------------------------------------------------
 
-ww_metadata <- read_csv("../../metadata/bphc_biobot_sequence_metadata.csv")
+storage_dir <- "/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/data/"
 
-baseload_ids <- read_table("../../metadata/baseload_ids.txt",col_names = F)
 
-clin_lin <- read_tsv("../data/var_surv_less_filt.tsv")
-
-ww_pcr <- read_csv("../data/pcr_final_baseload.csv")
+baseload_ids <- read_table(paste0(storage_dir, "baseload_ids.txt"),col_names = F)
+ww_metadata <- read_csv(paste0(storage_dir, "bphc_biobot_sequence_metadata.csv"))
+clin_lin <- read_tsv(paste0(storage_dir, "var_surv_less_filt.tsv"))
+ww_pcr <- read_csv(paste0(storage_dir, "pcr_final_baseload.csv"))
 
 # coverage_dir <- "../../coverage/"
 # coverage <- list.files(coverage_dir, pattern = "\\.qc\\.tsv$", full.names = TRUE) |>
@@ -21,11 +23,10 @@ ww_pcr <- read_csv("../data/pcr_final_baseload.csv")
 #   list_rbind()
 # coverage <- coverage |> mutate(sample=as.character(sample))
 # 
-# write_rds(coverage, "../data/coverage.rds") # 2026-03-31
+# write_rds(coverage, paste0(storage_dir, "coverage.rds")) # 2026-03-31
 # rm(coverage_dir, coverage)
 
-
-coverage_qc <- readRDS("../data/coverage.rds")
+coverage_qc <- readRDS(paste0(storage_dir, "coverage.rds"))
 
 
 # Wastewater metadata -----------------------------------------------------
@@ -138,26 +139,22 @@ p_counts
 ww_metadata <- ww_metadata |> 
   left_join(coverage_qc, by=c("FASTQ_ID"="sample"))
 
-# write_rds(ww_metadata, "../data/meta_clean.rds") # 2026-03-17
+# write_rds(ww_metadata, paste0(storage_dir, "meta_clean.rds")) # 2026-03-17
 
   # check which have failed QC
 
 ww_metadata |>
   arrange(year_epiweek, LOCATION) |>
   mutate(year_epiweek = factor(year_epiweek)) |>
-  mutate(QC_ov_depth10 = ifelse(frac_genome_cov_10x < 0.75, 1,0),
-         QC_spk_depth10 = ifelse(spike_frac_cov_10x < 0.75, 1,0),
-         fail_either75 = case_when(
-           QC_ov_depth10 + QC_spk_depth10 > 1 ~ 1,
-           QC_ov_depth10 + QC_spk_depth10 <= 1 ~ 0
-         )) |> 
-  drop_na(QC_ov_depth10) |> 
+  mutate(QC_ov_depth10 = ifelse(frac_genome_cov_10x < 0.5, 1,0),
+         QC_spk_depth10 = ifelse(spike_frac_cov_10x < 0.5, 1,0)) |> 
+  drop_na(QC_ov_depth10) |> # only baseload has been processed
   ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(QC_spk_depth10))) +
   geom_tile() +
   geom_text(aes(label=round(spike_frac_cov_10x, digits = 2))) +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_fill_manual(values = c("lightgreen", "red"), name="fail spike\n 75% @ 10x ?") +
+  scale_fill_manual(values = c("lightgreen", "red"), name="fail spike\n 50% @ 10x ?") +
   ggtitle("QC report", subtitle = "labels = spike coverage > 10x")
 
 ww_metadata |> 
@@ -180,7 +177,7 @@ clin_lin <- clin_lin |>
          year_epiweek = paste0(year, sprintf("%02d", epiweek))) |>
   mutate(year_epiweek=as.numeric(year_epiweek))
 
-# write_rds(clin_lin, "../data/clin_lin.rds") # 2026-02-05
+# write_rds(clin_lin, paste0(storage_dir, "clin_lin.rds")) # 2026-02-05
 
 
 # WW PCR data -------------------------------------------------------------
@@ -205,7 +202,7 @@ ww_pcr <- ww_pcr |>
   )) |> 
   select(-hum_frac_mic_conc, -hum_frac_mic_unit, -rec_eff_percent, -rec_eff_target_name)
 
-# write_rds(ww_pcr, "../data/ww_pcr.rds") # 2026-02-10
+# write_rds(ww_pcr, paste0(storage_dir, "ww_pcr.rds")) # 2026-02-10
 
 ### sites might have 1 or 2 samples per week (1 case of 3 samples)
 ### 
@@ -220,7 +217,7 @@ pop_wts <- ww_pcr |>
   mutate(popwt = pop/sum(pop))
 
 
-# write_rds(pop_wts, "../data/pop_wts.rds") # 2026-02-10
+# write_rds(pop_wts, paste0(storage_dir,"pop_wts.rds")) # 2026-02-10
 
 rm(list=setdiff(ls(), c("clin_lin","ww_metadata","ww_pcr","pop_wts")))
 
@@ -242,7 +239,7 @@ conc_wts <- ww_pcr |>
   mutate(logeff = log(meaneffCopiesL),
          lograw = log(meanrawCopiesL))
 
-# write_rds(conc_wts, "../data/conc_wts.rds") # 2026-03-09
+# write_rds(conc_wts, paste0(storage_dir,"conc_wts.rds")) # 2026-03-09
 
 
 
