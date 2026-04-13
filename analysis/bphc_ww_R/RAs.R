@@ -376,8 +376,9 @@ p_RAxNB <- ww_collapsed_complete |>
   ) +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1, size=3),
-    panel.spacing = unit(0.75, "lines")
+    axis.text.x = element_text(angle = 45, hjust = 1, size=4),
+    panel.spacing = unit(0.75, "lines"),
+    legend.position = "none"
   ) +
   scale_fill_manual(values = fill_cols, drop = FALSE) +
   geom_text(
@@ -387,7 +388,7 @@ p_RAxNB <- ww_collapsed_complete |>
   )
 
 p_RAxNB
-ggsave("draft_figures/p_RAxNB.jpg", p_RAxNB, scale=1.5)
+ggsave("../draft_figures/p_RAxNB.jpg", p_RAxNB, width = 22, height = 14, dpi = 300)
 
 
 # ### concentration weighted
