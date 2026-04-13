@@ -45,6 +45,7 @@ coverage/
 
 # sync scripts
 scripts/sync_freyja_agg.sh
+scripts/sync_draft_figs.sh
 
 # exploratory scripts
 analysis/bphc_ww_R/meta_exp.R
