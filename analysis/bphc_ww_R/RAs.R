@@ -338,7 +338,7 @@ p_RAxClin <- clin_collapsed_complete |>
   )
 
 p_RAxClin
-# ggsave("../figures/p_RAxClin.jpg", p_RAxClin)
+ggsave("../draft_figures/p_RAxClin.jpg", p_RAxClin, width = 12, height = 6, dpi = 300)
 
 
 # Plot WW -----------------------------------------------------------------
