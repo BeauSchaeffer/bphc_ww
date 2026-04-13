@@ -371,11 +371,12 @@ p_RAxNB <- ww_collapsed_complete |>
   scale_x_discrete(drop = FALSE) +  # keep empty weeks
   labs(
     x = "year_epiweek", y = "Relative Abundance", fill = "sublineage",
-    title = "SARS-CoV-2 Weekly Lineage Composition - Wastewater"
+    title = "SARS-CoV-2 Weekly Lineage Composition - Wastewater",
+    subtitle = "2026-04-13 batch 1"
   ) +
   theme_minimal() +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text.x = element_text(angle = 45, hjust = 1, size=3),
     panel.spacing = unit(0.75, "lines")
   ) +
   scale_fill_manual(values = fill_cols, drop = FALSE) +
@@ -386,7 +387,7 @@ p_RAxNB <- ww_collapsed_complete |>
   )
 
 p_RAxNB
-# ggsave("../figures/p_RAxNB.jpg", p_RAxNB, scale=1.5)
+ggsave("draft_figures/p_RAxNB.jpg", p_RAxNB, scale=1.5)
 
 
 # ### concentration weighted

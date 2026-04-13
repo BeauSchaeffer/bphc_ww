@@ -39,7 +39,7 @@ testing.md
 *.Rproj
 
 # analysis results
-analysis/figures/
+analysis/draft_figures/
 coverage/
 
 # sync scripts
