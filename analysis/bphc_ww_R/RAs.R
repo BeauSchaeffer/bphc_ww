@@ -338,7 +338,7 @@ p_RAxClin <- clin_collapsed_complete |>
   )
 
 p_RAxClin
-ggsave("../draft_figures/p_RAxClin.jpg", p_RAxClin, width = 12, height = 6, dpi = 300)
+# ggsave("../draft_figures/p_RAxClin.jpg", p_RAxClin, width = 12, height = 6, dpi = 300)
 
 
 # Plot WW -----------------------------------------------------------------
@@ -358,6 +358,28 @@ ww_collapsed_complete <- ww_collapsed_complete |>
   mutate(sublin_collapse = factor(sublin_collapse, levels = lin_levels))
 
 ### plot the "complete" data for ww
+
+  ### adding pcr concentration data
+
+# conc_label <- conc_wts |>
+#   mutate(time = as.character(year_epiweek)) |>
+#   filter(LOCATION != "Lower Roxbury",
+#          time %in% year_epiweek_levels) |>
+#   select(LOCATION, time, logeff)
+
+conc_label <- conc_wts |>
+  mutate(time = as.character(year_epiweek)) |>
+  filter(LOCATION != "Lower Roxbury",
+         time %in% year_epiweek_levels) |>
+  select(LOCATION, time, logeff) |>
+  mutate(
+    conc_quartile = cut(logeff, 
+                        breaks = quantile(logeff, probs = 0:4/4, na.rm = TRUE),
+                        labels = c("Q1", "Q2", "Q3", "Q4"),
+                        include.lowest = TRUE)
+  )
+
+
 p_RAxNB <- ww_collapsed_complete |>
   ggplot(aes(x = time, y = abundance, fill = sublin_collapse)) +
   geom_col() +
@@ -366,6 +388,22 @@ p_RAxNB <- ww_collapsed_complete |>
     aes(x = time, y = 1),
     fill = "grey40", alpha = 1,
     inherit.aes = FALSE
+  ) +
+  # geom_text(
+  #   data = conc_label |> mutate(time = factor(time, levels = year_epiweek_levels)),
+  #   aes(x = time, y = 1.00, label = round(logeff, 1)),
+  #   inherit.aes = FALSE,
+  #   size = 1.5, angle = 90, hjust = 0
+  # ) +
+  geom_point(
+    data = conc_label |> mutate(time = factor(time, levels = year_epiweek_levels)),
+    aes(x = time, y = 1.03, color = conc_quartile),
+    inherit.aes = FALSE,
+    size = 1.2
+  ) +
+  scale_color_manual(
+    values = c("Q1" = "#2C7BB6", "Q2" = "#ABD9E9", "Q3" = "#FDAE61", "Q4" = "#D7191C"),
+    name = "PCR conc\nquartile"
   ) +
   facet_wrap(~ LOCATION, scales = "free_y") +
   scale_x_discrete(drop = FALSE) +  # keep empty weeks
@@ -378,17 +416,21 @@ p_RAxNB <- ww_collapsed_complete |>
   theme(
     axis.text.x = element_text(angle = 45, hjust = 1, size=4),
     panel.spacing = unit(0.75, "lines"),
-    legend.position = "none"
+    legend.position = "right"
   ) +
   scale_fill_manual(values = fill_cols, drop = FALSE) +
   geom_text(
     aes(label = ifelse(abundance > 0.05, as.character(sublin_collapse), "")),
     position = position_stack(vjust = 0.5),
     size = 1.5, color = "white", angle=90
+  ) +
+  guides(
+    fill = "none",
+    color = guide_legend(title = "PCR conc\nquartile")
   )
 
 p_RAxNB
-ggsave("../draft_figures/p_RAxNB.jpg", p_RAxNB, width = 22, height = 14, dpi = 300)
+# ggsave("../draft_figures/p_RAxNB.jpg", p_RAxNB, width = 22, height = 14, dpi = 300)
 
 
 # ### concentration weighted
