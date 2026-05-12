@@ -6,19 +6,20 @@
 #SBATCH --job-name=bt2_align
 #SBATCH --output=logs/bt2_align_%A_%a.out
 #SBATCH --error=logs/bt2_align_%A_%a.err
-#SBATCH --array=68,70,78,90,96,101,102,103,105,111,113,115,122   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
+#SBATCH --array=0-685   # <-- Update to match number of samples ###** UPDATE **###
 
 # load Conda and activate local environment
 source ~/.bashrc
 conda activate /n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/alignment
 
-# generate sample ID from sample.txt and array index
-sample=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" samples.txt)
+# define samples file and generate sample ID from array index
+SAMPLES="/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/data/baseload_batch2_ids.txt"
+sample=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "$SAMPLES")
 
 # define input and output filenames and paths
 r1="trimmed/${sample}_R1.trimmed.fastq.gz"
 r2="trimmed/${sample}_R2.trimmed.fastq.gz"
-ref="reference/V4.1/SARS-CoV-2"
+ref="reference/V5.3.2/SARS-CoV-2"
 bam_out="aligned/${sample}.sorted.bam"
 log_out="logs/${sample}_bowtie2.log"
 
