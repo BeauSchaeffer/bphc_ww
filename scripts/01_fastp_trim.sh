@@ -6,14 +6,15 @@
 #SBATCH --job-name=fastp_trim
 #SBATCH --output=logs/fastp_trim_%A_%a.out
 #SBATCH --error=logs/fastp_trim_%A_%a.err
-#SBATCH --array=0-315   # <-- Update to match number of samples in samples.txt ###** UPDATE **###
+#SBATCH --array=0-685   # <-- Update to match number of samples ###** UPDATE **###
 
 # load Conda and activate local environment
 source ~/.bashrc
 conda activate /n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/fastp
 
-# generate sample ID from sample.txt and array index
-sample=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" samples.txt)
+# define samples file and generate sample ID from array index
+SAMPLES="/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/data/baseload_batch2_ids.txt"
+sample=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "$SAMPLES")
 
 # define input and output filenames and paths
 r1="data/${sample}_R1.fastq.gz"
