@@ -1,0 +1,47 @@
+#!/bin/bash
+#SBATCH --cpus-per-task=4
+#SBATCH --time=00:30:00
+#SBATCH -p hsph
+#SBATCH --mem=4G
+#SBATCH --job-name=ivar_trim
+#SBATCH --output=logs/ivar_trim_%A_%a.out
+#SBATCH --error=logs/ivar_trim_%A_%a.err
+#SBATCH --array=0-685   # <-- Update to match number of samples ###** UPDATE **###
+
+# load Conda and activate local environment
+source ~/.bashrc
+conda activate /n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/ivar
+
+# define samples file and generate sample ID from array index
+SAMPLES="/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/data/baseload_batch2_ids.txt"
+sample=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "$SAMPLES")
+
+# define input and output filenames and paths
+in_bam="aligned/${sample}.sorted.bam"
+out_bam="aligned/${sample}.trimmed.bam"
+bed_file="reference/V5.3.2/SARS-CoV-2.primer.bed"
+temp_prefix="aligned/${sample}.ivar_trimmed"
+# remove temp files if job fails mid-run or at end of script
+trap "rm -f ${temp_prefix}.bam" EXIT
+
+# make output and log directories if they don't exist
+mkdir -p aligned logs coverage
+
+echo "Running iVar trim on $sample..."
+
+# post-alignment trim with iVar
+# produces: aligned/${sample}.ivar_trimmed.bam - temporary file
+# -e flag: include reads with no primers
+
+ivar trim \
+  -i "$in_bam" \
+  -b "$bed_file" \
+  -p "$temp_prefix" \
+  -q 20 \
+  -e
+
+# sort and index with samtools
+samtools sort -@ 4 -o "$out_bam" "${temp_prefix}.bam"
+samtools index "$out_bam"
+
+echo "Done with $sample"
