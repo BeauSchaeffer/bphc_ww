@@ -17,6 +17,9 @@ ww_metadata <- read_csv(paste0(storage_dir, "bphc_biobot_sequence_metadata.csv")
 clin_lin <- read_tsv(paste0(storage_dir, "var_surv_less_filt.tsv"))
 ww_pcr <- read_csv(paste0(storage_dir, "pcr_final_baseload.csv"))
 
+## batch 1 seq coverage cleaned within scratch folder
+## renaming coverage.rds to batch1_coverage.rds 2026-06-12
+
 # coverage_dir <- "../../coverage/"
 # coverage <- list.files(coverage_dir, pattern = "\\.qc\\.tsv$", full.names = TRUE) |>
 #   map(read_tsv, show_col_types = FALSE) |>
@@ -24,9 +27,28 @@ ww_pcr <- read_csv(paste0(storage_dir, "pcr_final_baseload.csv"))
 # coverage <- coverage |> mutate(sample=as.character(sample))
 # 
 # write_rds(coverage, paste0(storage_dir, "coverage.rds")) # 2026-03-31
+## see note above about renaming
 # rm(coverage_dir, coverage)
 
-coverage_qc <- readRDS(paste0(storage_dir, "coverage.rds"))
+## batch 2 seq coverage
+
+# batch2_coverage_dir <- "/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/baseload_batch2_outputs/coverage/"
+# batch2_coverage <- list.files(batch2_coverage_dir, pattern = "\\.qc\\.tsv$", full.names = TRUE) |>
+#   map(read_tsv, show_col_types = FALSE) |>
+#   list_rbind()
+# batch2_coverage <- batch2_coverage |> mutate(sample=as.character(sample))
+# 
+# write_rds(batch2_coverage, paste0(storage_dir, "batch2_coverage.rds")) # 2026-06-12
+# 
+# batch1_coverage <- readRDS(paste0(storage_dir, "batch1_coverage.rds"))
+# 
+# compiled_coverage <- bind_rows(batch1_coverage, batch2_coverage)
+# 
+# write_rds(compiled_coverage, paste0(storage_dir, "compiled_coverage.rds")) # 2026-06-12
+# 
+# rm(batch2_coverage_dir,batch2_coverage,batch1_coverage,compiled_coverage)
+
+coverage_qc <- readRDS(paste0(storage_dir, "compiled_coverage.rds"))
 
 
 # Wastewater metadata -----------------------------------------------------
