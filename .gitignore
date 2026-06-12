@@ -44,7 +44,7 @@ analysis/figures
 coverage/
 
 # sync scripts
-scripts/sync_freyja_agg.sh
+scripts/sync_storage.sh
 scripts/sync_draft_figs.sh
 
 # exploratory scripts
