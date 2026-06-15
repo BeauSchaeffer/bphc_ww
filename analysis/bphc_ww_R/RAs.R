@@ -14,15 +14,20 @@ library(viridis)
 # Load data ---------------------------------------------------------------
 
 storage_dir <- "/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/data/"
+storage_dir <- "../../cluster_storage_clone/" # local use
 
 
 ww_metadata <- read_rds(paste0(storage_dir, "meta_clean.rds"))
+ww_metadata <- read_rds(paste0(storage_dir, "data/", "meta_clean.rds")) # local use
 
 clin_lin <- read_rds(paste0(storage_dir,"clin_lin.rds"))
+clin_lin <- read_rds(paste0(storage_dir,"data/","clin_lin.rds")) # local use
 
 pop_wts <- read_rds(paste0(storage_dir,"pop_wts.rds"))
+pop_wts <- read_rds(paste0(storage_dir,"data/","pop_wts.rds")) # local use
 
 conc_wts <- read_rds(paste0(storage_dir,"conc_wts.rds"))
+conc_wts <- read_rds(paste0(storage_dir,"data/","conc_wts.rds")) # local use
 
 
 # Parse demix -------------------------------------------------------------
@@ -79,6 +84,47 @@ sublineages.final$Sample <- sub("^([0-9]+).*", "\\1", sublineages.final$Sample)
 
 sublineages.final <- sublineages.final %>%
   mutate(sublineage = str_remove(as.character(sublineage), "-like[0-9]*$"))
+
+
+# Parse demix as function for multi-batch ---------------------------------
+
+parse_freyja_aggregate <- function(path){
+
+  results<-read.table(path, fill = TRUE, sep = "\t", h=T)
+  results<-as.data.frame(sapply(results, function(x) str_replace_all(x, "[',()\\]\\[]", ""))) # Removed the unwanted character: [], () and commas
+  results<-as.data.frame(sapply(results, function(x) trimws(gsub("\\s+", " ", x)))) # Removed double spaces
+
+  ### Sublineages data
+  for(i in 1:nrow(results)){
+    lineages.temp<-as.data.frame(t(setDT(tstrsplit(as.character(results[i, 3]), " ", fixed=TRUE))[]))
+    abundances.temp<-as.data.frame(t(setDT(tstrsplit(as.character(results[i, 4]), " ", fixed=TRUE))[]))
+    sample.temp<-rep(results[i, 1], nrow(lineages.temp))
+    if(i==1){
+      sublineages.final<-cbind(sample.temp, lineages.temp, abundances.temp)
+    } else {
+      sublineages.final<-rbind(sublineages.final, cbind(sample.temp, lineages.temp, abundances.temp))
+    }
+  }
+  names(sublineages.final)<-c("Sample", "sublineage", "abundance")
+
+  ### Code credit for parsing the demix output: https://github.com/a-roguet
+
+  ### clean up sample names
+  sublineages.final$Sample <- sub("^([0-9]+).*", "\\1", sublineages.final$Sample)
+
+  ### Freyja collapse lineage option results in classifications like "BA.4.6-like" or "BA.5.2-like2"
+  ### remove "-likeN" suffix
+
+  sublineages.final <- sublineages.final %>%
+    mutate(sublineage = str_remove(as.character(sublineage), "-like[0-9]*$"))
+
+  sublineages.final
+}
+
+sublineages.final <- bind_rows(
+  parse_freyja_aggregate(paste0(storage_dir,"baseload_batch1_outputs/freyja_aggregate/aggregated.tsv")), # local use
+  parse_freyja_aggregate(paste0(storage_dir,"baseload_batch2_outputs/freyja_aggregate/aggregated.tsv")) # local use
+)
 
 
 # Merge with metadata -----------------------------------------------------
