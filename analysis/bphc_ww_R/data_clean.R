@@ -10,12 +10,19 @@ library(tidyverse)
 # Load data ---------------------------------------------------------------
 
 storage_dir <- "/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/data/"
-
+storage_dir <- "../../cluster_storage_clone/" # local use
 
 baseload_ids <- read_table(paste0(storage_dir, "baseload_ids.txt"),col_names = F)
+baseload_ids <- read_table(paste0(storage_dir, "data/", "baseload_ids.txt"),col_names = F) # local use
+
 ww_metadata <- read_csv(paste0(storage_dir, "bphc_biobot_sequence_metadata.csv"))
+ww_metadata <- read_csv(paste0(storage_dir,"data/",  "bphc_biobot_sequence_metadata.csv")) # local use
+
 clin_lin <- read_tsv(paste0(storage_dir, "var_surv_less_filt.tsv"))
+clin_lin <- read_tsv(paste0(storage_dir,"data/",  "var_surv_less_filt.tsv")) # local use
+
 ww_pcr <- read_csv(paste0(storage_dir, "pcr_final_baseload.csv"))
+ww_pcr <- read_csv(paste0(storage_dir,"data/",  "pcr_final_baseload.csv")) # local use
 
 ## batch 1 seq coverage cleaned within scratch folder
 ## renaming coverage.rds to batch1_coverage.rds 2026-06-12
@@ -49,6 +56,7 @@ ww_pcr <- read_csv(paste0(storage_dir, "pcr_final_baseload.csv"))
 # rm(batch2_coverage_dir,batch2_coverage,batch1_coverage,compiled_coverage)
 
 coverage_qc <- readRDS(paste0(storage_dir, "compiled_coverage.rds"))
+coverage_qc <- readRDS(paste0(storage_dir, "data/", "compiled_coverage.rds")) # local use
 
 
 # Wastewater metadata -----------------------------------------------------
@@ -158,6 +166,10 @@ p_counts
 
 ### join with QC data
 
+  # a few (12) samples failed pipeline and have no QC -- exclude
+
+ww_metadata <- ww_metadata[ww_metadata$FASTQ_ID %in% coverage_qc$sample,]
+
 ww_metadata <- ww_metadata |> 
   left_join(coverage_qc, by=c("FASTQ_ID"="sample"))
 
@@ -172,8 +184,8 @@ ww_metadata |>
          QC_spk_depth10 = ifelse(spike_frac_cov_10x < 0.5, 1,0)) |> 
   drop_na(QC_ov_depth10) |> # only baseload has been processed
   ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(QC_spk_depth10))) +
-  geom_tile() +
-  geom_text(aes(label=round(spike_frac_cov_10x, digits = 2))) +
+  geom_tile(color = "grey80", linewidth = 0.3) +
+  geom_text(aes(label=round(spike_frac_cov_10x, digits = 2)), size=1.5) +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_fill_manual(values = c("lightgreen", "red"), name="fail spike\n 50% @ 10x ?") +
