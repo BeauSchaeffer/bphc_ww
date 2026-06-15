@@ -456,7 +456,7 @@ p_RAxNB <- ww_collapsed_complete |>
   labs(
     x = "year_epiweek", y = "Relative Abundance", fill = "sublineage",
     title = "SARS-CoV-2 Weekly Lineage Composition - Wastewater",
-    subtitle = "2026-04-13 batch 1"
+    subtitle = "2026-06-13 batch 1+2"
   ) +
   theme_minimal() +
   theme(
