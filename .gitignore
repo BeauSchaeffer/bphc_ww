@@ -49,6 +49,7 @@ scripts/sync_draft_figs.sh
 
 # exploratory scripts
 analysis/bphc_ww_R/meta_exp.R
+analysis/bphc_ww_R/flow_model.R
 
 # notes
 notebook.md

@@ -324,6 +324,9 @@ clin_collapsed <- collapse_sublineages_timeaware(clinical,
                                                  suffix = ".x",
                                                  keep_tbl = keep_tbl)
 
+write_rds(ww_collapsed, "../../cluster_storage_clone/data/ww_collapsed.R") # local use
+write_rds(clin_collapsed, "../../cluster_storage_clone/data/clin_collapsed.R") # local use
+
 # stable lineage order for all plots
 lin_levels <- sort(unique(c(
   as.character(ww_collapsed$sublin_collapse),
