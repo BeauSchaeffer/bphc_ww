@@ -56,6 +56,9 @@ samples_original.txt
 samples_clean.txt
 bad_samples.txt
 
+# local files
+cluster_storage_clone/
+
 # RETAIN select files
 !scripts/
 !reference/
