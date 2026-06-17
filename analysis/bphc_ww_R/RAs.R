@@ -324,8 +324,8 @@ clin_collapsed <- collapse_sublineages_timeaware(clinical,
                                                  suffix = ".x",
                                                  keep_tbl = keep_tbl)
 
-write_rds(ww_collapsed, "../../cluster_storage_clone/data/ww_collapsed.R") # local use
-write_rds(clin_collapsed, "../../cluster_storage_clone/data/clin_collapsed.R") # local use
+# write_rds(ww_collapsed, "../../cluster_storage_clone/data/ww_collapsed.R") # local use
+# write_rds(clin_collapsed, "../../cluster_storage_clone/data/clin_collapsed.R") # local use
 
 # stable lineage order for all plots
 lin_levels <- sort(unique(c(
@@ -389,7 +389,7 @@ p_RAxClin <- clin_collapsed_complete |>
 
 p_RAxClin
 # ggsave("../draft_figures/p_RAxClin.jpg", p_RAxClin, width = 12, height = 6, dpi = 300)
-ggsave("../../cluster_storage_clone/draft_figures/RAxClin.jpg", p_RAxClin, width = 12, height = 6, dpi = 300) # local use
+# ggsave("../../cluster_storage_clone/draft_figures/RAxClin.jpg", p_RAxClin, width = 12, height = 6, dpi = 300) # local use
 
 
 
