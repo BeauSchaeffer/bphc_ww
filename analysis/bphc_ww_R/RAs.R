@@ -13,21 +13,15 @@ library(viridis)
 
 # Load data ---------------------------------------------------------------
 
-storage_dir <- "/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/data/"
-storage_dir <- "../../cluster_storage_clone/" # local use
-
+storage_dir <- "../data/"
 
 ww_metadata <- read_rds(paste0(storage_dir, "meta_clean.rds"))
-ww_metadata <- read_rds(paste0(storage_dir, "data/", "meta_clean.rds")) # local use
 
-clin_lin <- read_rds(paste0(storage_dir,"clin_lin.rds"))
-clin_lin <- read_rds(paste0(storage_dir,"data/","clin_lin.rds")) # local use
+clin_lin <- read_rds(paste0(storage_dir, "clin_lin.rds"))
 
-pop_wts <- read_rds(paste0(storage_dir,"pop_wts.rds"))
-pop_wts <- read_rds(paste0(storage_dir,"data/","pop_wts.rds")) # local use
+pop_wts <- read_rds(paste0(storage_dir, "pop_wts.rds"))
 
-conc_wts <- read_rds(paste0(storage_dir,"conc_wts.rds"))
-conc_wts <- read_rds(paste0(storage_dir,"data/","conc_wts.rds")) # local use
+conc_wts <- read_rds(paste0(storage_dir, "conc_wts.rds"))
 
 
 # Parse demix -------------------------------------------------------------
@@ -122,8 +116,8 @@ parse_freyja_aggregate <- function(path){
 }
 
 sublineages.final <- bind_rows(
-  parse_freyja_aggregate(paste0(storage_dir,"baseload_batch1_outputs/freyja_aggregate/aggregated.tsv")), # local use
-  parse_freyja_aggregate(paste0(storage_dir,"baseload_batch2_outputs/freyja_aggregate/aggregated.tsv")) # local use
+  parse_freyja_aggregate("../baseload_batch1_outputs/freyja_aggregate/aggregated.tsv"),
+  parse_freyja_aggregate("../baseload_batch2_outputs/freyja_aggregate/aggregated.tsv")
 )
 
 
@@ -324,8 +318,22 @@ clin_collapsed <- collapse_sublineages_timeaware(clinical,
                                                  suffix = ".x",
                                                  keep_tbl = keep_tbl)
 
-# write_rds(ww_collapsed, "../../cluster_storage_clone/data/ww_collapsed.R") # local use
-# write_rds(clin_collapsed, "../../cluster_storage_clone/data/clin_collapsed.R") # local use
+# write_rds(ww_collapsed, "../data/ww_collapsed.R")
+# write_rds(clin_collapsed, "../data/clin_collapsed.R")
+
+# ww_collapsed_complete <- ww_collapsed |>
+#   mutate(time = as.character(time)) |>
+#   complete(
+#     time = year_epiweek_levels,
+#     LOCATION,
+#     sublin_collapse,
+#     fill = list(abundance = 0)
+#   ) |>
+#   mutate(time = factor(time, levels = year_epiweek_levels),
+#          year_epiweek = as.numeric(as.character(time))) |> 
+#   left_join(conc_wts, by = c("LOCATION", "year_epiweek"))
+# write_rds(ww_collapsed_complete, "../data/ww_collapsed_complete.rds")
+# rm(ww_collapsed_complete)
 
 # stable lineage order for all plots
 lin_levels <- sort(unique(c(
@@ -389,7 +397,7 @@ p_RAxClin <- clin_collapsed_complete |>
 
 p_RAxClin
 # ggsave("../draft_figures/p_RAxClin.jpg", p_RAxClin, width = 12, height = 6, dpi = 300)
-# ggsave("../../cluster_storage_clone/draft_figures/RAxClin.jpg", p_RAxClin, width = 12, height = 6, dpi = 300) # local use
+# ggsave("../draft_figures/RAxClin.jpg", p_RAxClin, width = 12, height = 6, dpi = 300)
 
 
 
@@ -532,11 +540,11 @@ plots_by_location[[locations[12]]]
 
 lapply(locations, function(loc) {
   ggsave(
-    paste0("../../cluster_storage_clone/draft_figures/RA_plots/RAxNB_", gsub(" ", "_", loc), ".jpg"),
+    paste0("../draft_figures/RA_plots/RAxNB_", gsub(" ", "_", loc), ".jpg"),
     plots_by_location[[loc]],
     width = 14, height = 6, dpi = 300
   )
-}) # local use
+})
 
 
 ### concentration weighted
@@ -600,11 +608,11 @@ plots_by_location_concwt[[1]]
 
 lapply(locations, function(loc) {
   ggsave(
-    paste0("../../cluster_storage_clone/draft_figures/RA_concwt_plots/RAxNB_", gsub(" ", "_", loc), ".jpg"),
+    paste0("../draft_figures/RA_concwt_plots/RAxNB_", gsub(" ", "_", loc), ".jpg"),
     plots_by_location_concwt[[loc]],
     width = 14, height = 6, dpi = 300
   )
-}) # local use
+})
 
 
 
@@ -751,8 +759,7 @@ p_RAxCity <- ww_citywide_weighted_complete |>
 
 p_RAxCity
 
-# ggsave("../figures/p_RAxCity.jpg", p_RAxCity)
-ggsave("../../cluster_storage_clone/draft_figures/p_RAxCity.jpg", p_RAxCity, width = 12, height = 6, dpi = 300) # local use
+ggsave("../draft_figures/p_RAxCity.jpg", p_RAxCity, width = 12, height = 6, dpi = 300)
 
 
 

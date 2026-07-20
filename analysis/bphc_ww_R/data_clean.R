@@ -9,20 +9,15 @@ library(tidyverse)
 
 # Load data ---------------------------------------------------------------
 
-storage_dir <- "/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/data/"
-storage_dir <- "../../cluster_storage_clone/" # local use
+storage_dir <- "../data/"
 
-baseload_ids <- read_table(paste0(storage_dir, "baseload_ids.txt"),col_names = F)
-baseload_ids <- read_table(paste0(storage_dir, "data/", "baseload_ids.txt"),col_names = F) # local use
+baseload_ids <- read_table(paste0(storage_dir, "baseload_ids.txt"), col_names = F)
 
 ww_metadata <- read_csv(paste0(storage_dir, "bphc_biobot_sequence_metadata.csv"))
-ww_metadata <- read_csv(paste0(storage_dir,"data/",  "bphc_biobot_sequence_metadata.csv")) # local use
 
 clin_lin <- read_tsv(paste0(storage_dir, "var_surv_less_filt.tsv"))
-clin_lin <- read_tsv(paste0(storage_dir,"data/",  "var_surv_less_filt.tsv")) # local use
 
 ww_pcr <- read_csv(paste0(storage_dir, "pcr_final_baseload.csv"))
-ww_pcr <- read_csv(paste0(storage_dir,"data/",  "pcr_final_baseload.csv")) # local use
 
 ## batch 1 seq coverage cleaned within scratch folder
 ## renaming coverage.rds to batch1_coverage.rds 2026-06-12
@@ -56,7 +51,6 @@ ww_pcr <- read_csv(paste0(storage_dir,"data/",  "pcr_final_baseload.csv")) # loc
 # rm(batch2_coverage_dir,batch2_coverage,batch1_coverage,compiled_coverage)
 
 coverage_qc <- readRDS(paste0(storage_dir, "compiled_coverage.rds"))
-coverage_qc <- readRDS(paste0(storage_dir, "data/", "compiled_coverage.rds")) # local use
 
 
 # Wastewater metadata -----------------------------------------------------

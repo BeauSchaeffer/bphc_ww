@@ -1,6 +1,6 @@
-# raw data and intermediate files
+# raw data and intermediate files (informatics-side, cluster-only)
 data/
-metadata/
+informatics/metadata/
 aligned/
 trimmed/
 freyja_variants/
@@ -9,11 +9,11 @@ freyja_aggregate/
 logs/
 env/
 holding/
-samples.txt
+informatics/samples.txt
 samples_clean.txt
 samples_original.txt
 bad_samples.txt
-testing.md
+informatics/testing.md
 
 # system & temp files
 *.log
@@ -38,32 +38,35 @@ testing.md
 .Renviron
 *.Rproj
 
-# analysis results
+# analysis inputs / results (local landing zone synced from cluster)
+analysis/data/
+analysis/model_data/
 analysis/draft_figures/
-analysis/figures
+analysis/baseload_batch1_outputs/
+analysis/baseload_batch2_outputs/
 coverage/
 
 # sync scripts
-scripts/sync_storage.sh
-scripts/sync_draft_figs.sh
+informatics/scripts/sync_storage.sh
+informatics/scripts/sync_draft_figs.sh
 
 # exploratory scripts
 analysis/bphc_ww_R/meta_exp.R
 analysis/bphc_ww_R/flow_model_data.R
 analysis/bphc_ww_R/flow_model.R
 
+# compiled cmdstan binary (build artifact, not source)
+analysis/bphc_ww_R/gravity_model
+
 # notes
-notebook.md
+informatics/notebook.md
 samples_original.txt
 samples_clean.txt
 bad_samples.txt
 
-# local files
-cluster_storage_clone/
-
 # RETAIN select files
-!scripts/
-!reference/
+!informatics/scripts/
+!informatics/reference/
 !barcodes/
 !README.md
 

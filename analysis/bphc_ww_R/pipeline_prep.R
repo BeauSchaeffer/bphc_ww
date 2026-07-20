@@ -10,7 +10,7 @@ library(lubridate)
 
 # Load data ---------------------------------------------------------------
 
-storage_dir <- "/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/data/"
+storage_dir <- "../data/"
 
 meta_clean <- readRDS(paste0(storage_dir,"meta_clean.rds"))
 
