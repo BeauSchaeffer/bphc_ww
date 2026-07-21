@@ -11,7 +11,7 @@ out_dir  <- "../model_data/"  # intermediate objects
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
 # Lineages to pool, in chronological order (defines the L index in 02).
-lineages  <- c("BA.5.x", "BQ.1.x", "XBB.1.x", "EG.5.x", "HV.1.x", "JN.1.x")
+lineages  <- c("BA.5.x", "BQ.1.x", "XBB.1.x", "EG.5.x", "HV.1.x", "JN.1.x", "KP.2.x")
 drop_locs <- "Lower Roxbury"   # no detections across sampled weeks -> dropped
 
 # ---- Libraries --------------------------------------------------------------

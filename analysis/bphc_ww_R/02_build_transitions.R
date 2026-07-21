@@ -19,7 +19,7 @@ abund <- read_rds(paste0(out_dir, "abund.rds"))
 # ---- 2. Indices: lineage, location, week (all global) -----------------------
 # Lineage order (= L) is fixed chronologically; keep only those present.
 lineage_index <- tibble(
-  lineage = c("BA.5.x", "BQ.1.x", "XBB.1.x", "EG.5.x", "HV.1.x", "JN.1.x")
+  lineage = c("BA.5.x", "BQ.1.x", "XBB.1.x", "EG.5.x", "HV.1.x", "JN.1.x", "KP.2.x")
 ) |>
   filter(lineage %in% abund$sublin_collapse) |>
   mutate(L = row_number())
