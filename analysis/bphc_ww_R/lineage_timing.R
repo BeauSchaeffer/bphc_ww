@@ -2,7 +2,9 @@
 # lineage_timing.R
 # Explore when each modelled lineage first arrives in each neighborhood, and
 # how much arrival timing varies across neighborhoods (which catchments lead,
-# which lag). Standalone: reads abund.rds + shared indices from the gravity-
+# which lag) -- both per lineage (fig_lineage_arrival_lag.png) and collapsed
+# to a per-neighborhood leader/laggard summary (fig_neighborhood_detection_
+# timing.png). Standalone: reads abund.rds + shared indices from the gravity-
 # model pipeline (01/02), does not modify their outputs. Rerun top-to-bottom.
 # =============================================================================
 
@@ -105,3 +107,49 @@ ggsave(paste0(fig_dir, "fig_lineage_arrival_lag.png"), fig1,
 # ---- 5. Save --------------------------------------------------------------------
 write_rds(arrival, paste0(data_dir, "lineage_arrival.rds"))
 cat("\nSaved lineage_arrival.rds and fig_lineage_arrival_lag.png to", fig_dir, "\n")
+
+# ---- 6. Per-neighborhood detection timing (leader/laggard summary) -------------
+# Collapses lag_weeks to one row per neighborhood: is this catchment
+# consistently early across lineages, or does its low mean lag just reflect
+# missing the slow-to-arrive lineages entirely? n_missed distinguishes the two.
+loc_summary <- arrival |>
+  group_by(LOCATION) |>
+  summarise(
+    n_detected = sum(!is.na(lag_weeks)),
+    n_missed   = sum(is.na(lag_weeks)),
+    mean_lag   = mean(lag_weeks, na.rm = TRUE),
+    se_lag     = if (n_detected > 1) sd(lag_weeks, na.rm = TRUE) / sqrt(n_detected) else NA_real_,
+    .groups = "drop"
+  ) |>
+  arrange(mean_lag)
+
+cat("\n--- per-neighborhood detection summary (leaders first) ---\n")
+print(loc_summary, n = Inf)
+
+fig2 <- ggplot() +
+  geom_jitter(
+    data = arrival |> filter(!is.na(lag_weeks)) |> mutate(LOCATION = factor(LOCATION, levels = rev(loc_order))),
+    aes(x = lag_weeks, y = LOCATION),
+    width = 0, height = 0.15, alpha = 0.35, size = 1.8, color = "#2c7fb8"
+  ) +
+  geom_errorbarh(
+    data = loc_summary |> mutate(LOCATION = factor(LOCATION, levels = rev(loc_order))),
+    aes(xmin = mean_lag - se_lag, xmax = mean_lag + se_lag, y = LOCATION),
+    height = 0, color = "#d7191c"
+  ) +
+  geom_point(
+    data = loc_summary |> mutate(LOCATION = factor(LOCATION, levels = rev(loc_order))),
+    aes(x = mean_lag, y = LOCATION, shape = factor(n_missed)),
+    color = "#d7191c", size = 3, stroke = 1.2
+  ) +
+  scale_shape_manual(name = "# lineages\nnever detected", values = c("0" = 16, "1" = 4)) +
+  labs(title = "Neighborhood detection timing across lineages",
+       subtitle = "Blue dots = per-lineage lag (weeks after citywide first detection); red = mean ± SE",
+       x = "arrival lag (weeks)", y = NULL) +
+  theme_minimal(base_size = 11)
+
+ggsave(paste0(fig_dir, "fig_neighborhood_detection_timing.png"), fig2,
+       width = 8, height = 6, dpi = 200, bg = "white")
+
+write_rds(loc_summary, paste0(data_dir, "neighborhood_detection_timing.rds"))
+cat("\nSaved neighborhood_detection_timing.rds and fig_neighborhood_detection_timing.png to", fig_dir, "\n")
