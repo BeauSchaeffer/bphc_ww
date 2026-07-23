@@ -64,6 +64,9 @@ samples_original.txt
 samples_clean.txt
 bad_samples.txt
 
+# local-only, untracked
+CLAUDE.md
+
 # RETAIN select files
 !informatics/scripts/
 !informatics/reference/

@@ -24,60 +24,60 @@ pop_wts <- read_rds(paste0(storage_dir, "pop_wts.rds"))
 conc_wts <- read_rds(paste0(storage_dir, "conc_wts.rds"))
 
 
-# Parse demix -------------------------------------------------------------
-
-
-### Code credit for parsing the demix output: https://github.com/a-roguet
-
-results<-read.table("/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/freyja_aggregate/aggregated.tsv", fill = TRUE, sep = "\t", h=T)
-results<-as.data.frame(sapply(results, function(x) str_replace_all(x, "[',()\\]\\[]", ""))) # Removed the unwanted character: [], () and commas
-results<-as.data.frame(sapply(results, function(x) trimws(gsub("\\s+", " ", x)))) # Removed double spaces
-
-### Summarized data
-summarized<-as.data.frame(setDT(tstrsplit(as.character(results$summarized), " ", fixed=TRUE))[]) # Extract Summarized data
-summarized$sample<-results$X
-
-for(i in 1:((ncol(summarized)-1)/2)){
-  if(i==1){
-    summarized.final<-summarized[,c(ncol(summarized),1:2)]
-  } else {
-    start=i*2-1; end=i*2
-    summarized.final<-rbind(summarized.final, setNames(summarized[,c(ncol(summarized), start:end)], names(summarized.final)))
-  }
-}
-summarized.final<-summarized.final[complete.cases(summarized.final), ]
-names(summarized.final)<-c("Sample", "lineage", "abundance")
-
-
-### Sublineages data
-for(i in 1:nrow(results)){
-  lineages.temp<-as.data.frame(t(setDT(tstrsplit(as.character(results[i, 3]), " ", fixed=TRUE))[]))
-  abundances.temp<-as.data.frame(t(setDT(tstrsplit(as.character(results[i, 4]), " ", fixed=TRUE))[]))
-  sample.temp<-rep(results[i, 1], nrow(lineages.temp))
-  if(i==1){
-    sublineages.final<-cbind(sample.temp, lineages.temp, abundances.temp)
-  } else {
-    sublineages.final<-rbind(sublineages.final, cbind(sample.temp, lineages.temp, abundances.temp))
-  }
-}
-names(sublineages.final)<-c("Sample", "sublineage", "abundance")
-
-### Code credit for parsing the demix output: https://github.com/a-roguet
-
-### clean up parsed output
-
-rm(abundances.temp, lineages.temp, results, summarized, summarized.final, end, i, sample.temp, start)
-
-### files created: summarized.final, sublineages.final
-
-### clean up sample names
-sublineages.final$Sample <- sub("^([0-9]+).*", "\\1", sublineages.final$Sample)
-
-### Freyja collapse lineage option results in classifications like "BA.4.6-like" or "BA.5.2-like2"
-### remove "-likeN" suffix
-
-sublineages.final <- sublineages.final %>%
-  mutate(sublineage = str_remove(as.character(sublineage), "-like[0-9]*$"))
+# # Parse demix -------------------------------------------------------------
+# 
+# 
+# ### Code credit for parsing the demix output: https://github.com/a-roguet
+# 
+# results<-read.table("/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/freyja_aggregate/aggregated.tsv", fill = TRUE, sep = "\t", h=T)
+# results<-as.data.frame(sapply(results, function(x) str_replace_all(x, "[',()\\]\\[]", ""))) # Removed the unwanted character: [], () and commas
+# results<-as.data.frame(sapply(results, function(x) trimws(gsub("\\s+", " ", x)))) # Removed double spaces
+# 
+# ### Summarized data
+# summarized<-as.data.frame(setDT(tstrsplit(as.character(results$summarized), " ", fixed=TRUE))[]) # Extract Summarized data
+# summarized$sample<-results$X
+# 
+# for(i in 1:((ncol(summarized)-1)/2)){
+#   if(i==1){
+#     summarized.final<-summarized[,c(ncol(summarized),1:2)]
+#   } else {
+#     start=i*2-1; end=i*2
+#     summarized.final<-rbind(summarized.final, setNames(summarized[,c(ncol(summarized), start:end)], names(summarized.final)))
+#   }
+# }
+# summarized.final<-summarized.final[complete.cases(summarized.final), ]
+# names(summarized.final)<-c("Sample", "lineage", "abundance")
+# 
+# 
+# ### Sublineages data
+# for(i in 1:nrow(results)){
+#   lineages.temp<-as.data.frame(t(setDT(tstrsplit(as.character(results[i, 3]), " ", fixed=TRUE))[]))
+#   abundances.temp<-as.data.frame(t(setDT(tstrsplit(as.character(results[i, 4]), " ", fixed=TRUE))[]))
+#   sample.temp<-rep(results[i, 1], nrow(lineages.temp))
+#   if(i==1){
+#     sublineages.final<-cbind(sample.temp, lineages.temp, abundances.temp)
+#   } else {
+#     sublineages.final<-rbind(sublineages.final, cbind(sample.temp, lineages.temp, abundances.temp))
+#   }
+# }
+# names(sublineages.final)<-c("Sample", "sublineage", "abundance")
+# 
+# ### Code credit for parsing the demix output: https://github.com/a-roguet
+# 
+# ### clean up parsed output
+# 
+# rm(abundances.temp, lineages.temp, results, summarized, summarized.final, end, i, sample.temp, start)
+# 
+# ### files created: summarized.final, sublineages.final
+# 
+# ### clean up sample names
+# sublineages.final$Sample <- sub("^([0-9]+).*", "\\1", sublineages.final$Sample)
+# 
+# ### Freyja collapse lineage option results in classifications like "BA.4.6-like" or "BA.5.2-like2"
+# ### remove "-likeN" suffix
+# 
+# sublineages.final <- sublineages.final %>%
+#   mutate(sublineage = str_remove(as.character(sublineage), "-like[0-9]*$"))
 
 
 # Parse demix as function for multi-batch ---------------------------------
@@ -143,26 +143,6 @@ qc_flags_nb <- ww_metadata |>
   summarise(low_spike_qc = any(low_spike_qc), .groups = "drop")
 
 qc_flags_nb <- qc_flags_nb |> filter(time %in% sublin_meta$year_epiweek)
-
-
-# Demix progress report ---------------------------------------------------
-
-
-# p_demix_progress <- ww_metadata |>
-#   mutate(freyja = case_when(
-#     FASTQ_ID %in% sublineages.final$Sample ~ 1,
-#     !FASTQ_ID %in% sublineages.final$Sample ~ 0
-#   )) |>
-#   arrange(year_epiweek, LOCATION) |>
-#   mutate(year_epiweek = factor(year_epiweek)) |>
-#   ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(freyja))) +
-#   geom_tile() +
-#   theme_classic() +
-#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-#   scale_fill_manual(values = c("#4C9AED", "#654CED"), name="demix")
-# p_demix_progress
-#
-# ggsave("../figures/p_demix_progress.jpg", p_demix_progress, scale = 1.5) # 2025-11-10
 
 
 # Collapsing sublineages --------------------------------------------------
@@ -281,7 +261,7 @@ clinical <- clin_lin |>
          epiweek=week)
 
 ### remove later - filter to relevant time that samples have been processed
-clinical <- clinical |> filter(year_epiweek %in% sublin_meta$year_epiweek)
+# clinical <- clinical |> filter(year_epiweek %in% sublin_meta$year_epiweek)
 
 ### pseudo variables
 
@@ -318,22 +298,28 @@ clin_collapsed <- collapse_sublineages_timeaware(clinical,
                                                  suffix = ".x",
                                                  keep_tbl = keep_tbl)
 
-# write_rds(ww_collapsed, "../data/ww_collapsed.R")
-# write_rds(clin_collapsed, "../data/clin_collapsed.R")
+write_rds(ww_collapsed, "../data/ww_collapsed.rds")
+# write_rds(clin_collapsed, "../data/clin_collapsed.rds") # no downstream readers
 
-# ww_collapsed_complete <- ww_collapsed |>
-#   mutate(time = as.character(time)) |>
-#   complete(
-#     time = year_epiweek_levels,
-#     LOCATION,
-#     sublin_collapse,
-#     fill = list(abundance = 0)
-#   ) |>
-#   mutate(time = factor(time, levels = year_epiweek_levels),
-#          year_epiweek = as.numeric(as.character(time))) |> 
-#   left_join(conc_wts, by = c("LOCATION", "year_epiweek"))
-# write_rds(ww_collapsed_complete, "../data/ww_collapsed_complete.rds")
-# rm(ww_collapsed_complete)
+
+year_epiweek_levels <- sort(unique(c(
+  ww_collapsed$time,
+  clin_collapsed$time
+))) |> as.character()
+
+ww_collapsed_complete <- ww_collapsed |>
+  mutate(time = as.character(time)) |>
+  complete(
+    time = year_epiweek_levels,
+    LOCATION,
+    sublin_collapse,
+    fill = list(abundance = 0)
+  ) |>
+  mutate(time = factor(time, levels = year_epiweek_levels),
+         year_epiweek = as.numeric(as.character(time))) |>
+  left_join(conc_wts, by = c("LOCATION", "year_epiweek"))
+
+write_rds(ww_collapsed_complete, "../data/ww_collapsed_complete.rds") ### have not yet rewritten 07-23 after edits
 
 # stable lineage order for all plots
 lin_levels <- sort(unique(c(
@@ -354,12 +340,6 @@ clin_collapsed <- clin_collapsed |> mutate(sublin_collapse = factor(sublin_colla
 
 
 # Plot clinical -----------------------------------------------------------
-
-### identify set of weeks for plotting
-year_epiweek_levels <- sort(unique(c(
-  ww_collapsed$time,
-  clin_collapsed$time
-))) |> as.character()
 
 
 ### create a "complete" dataset such that each location has a placeholder for all samples and lineage
@@ -397,8 +377,6 @@ p_RAxClin <- clin_collapsed_complete |>
 
 p_RAxClin
 # ggsave("../draft_figures/p_RAxClin.jpg", p_RAxClin, width = 12, height = 6, dpi = 300)
-# ggsave("../draft_figures/RAxClin.jpg", p_RAxClin, width = 12, height = 6, dpi = 300)
-
 
 
 # Plot WW -----------------------------------------------------------------
@@ -535,7 +513,7 @@ plots_by_location <- setNames(
   locations
 )
 
-plots_by_location[[locations[12]]]
+# plots_by_location[[locations[12]]] # interactive preview only
 
 
 lapply(locations, function(loc) {
@@ -604,7 +582,7 @@ plots_by_location_concwt <- setNames(
 )
 
 
-plots_by_location_concwt[[1]]
+# plots_by_location_concwt[[1]] # interactive preview only
 
 lapply(locations, function(loc) {
   ggsave(
@@ -619,38 +597,40 @@ lapply(locations, function(loc) {
 
 
 ### concentration weighted
+### exploratory multi-panel version, superseded by the per-location
+### concwt loop above (RA_concwt_plots/) -- never saved, unassigned
 
-ww_collapsed_complete |>
-  mutate(year_epiweek = paste0(year, sprintf("%02d", epiweek)),
-         year_epiweek = ifelse(year_epiweek=="NANA",NA,year_epiweek),
-         year_epiweek=as.numeric(year_epiweek)) |>
-  left_join(conc_wts, by=c("LOCATION", "year_epiweek")) |>
-  mutate(abundance_LEwtd = abundance*logeff,
-         abundance_Ewtd = abundance*meaneffCopiesL) |>
-
-  ggplot(aes(x = time, y = abundance_LEwtd, fill = sublin_collapse)) +
-  geom_col() +
-  facet_wrap(~ LOCATION) +
-  scale_x_discrete(drop = FALSE) +  # keep empty weeks
-  labs(
-    x = "year_epiweek", y = "Absolute-ish Abundance", fill = "sublineage",
-    title = "SARS-CoV-2 Weekly Lineage Composition - Wastewater"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    panel.spacing = unit(0.75, "lines")
-  ) +
-  scale_fill_manual(values = fill_cols, drop = FALSE) +
-  geom_text(
-    aes(label = ifelse(abundance > 0.05, as.character(sublin_collapse), "")),
-    position = position_stack(vjust = 0.5),
-    size = 2.25, color = "white"
-  ) +
-  guides(
-    fill = "none",
-    color = guide_legend(title = "PCR conc\nquartile")
-  )
+# ww_collapsed_complete |>
+#   mutate(year_epiweek = paste0(year, sprintf("%02d", epiweek)),
+#          year_epiweek = ifelse(year_epiweek=="NANA",NA,year_epiweek),
+#          year_epiweek=as.numeric(year_epiweek)) |>
+#   left_join(conc_wts, by=c("LOCATION", "year_epiweek")) |>
+#   mutate(abundance_LEwtd = abundance*logeff,
+#          abundance_Ewtd = abundance*meaneffCopiesL) |>
+#
+#   ggplot(aes(x = time, y = abundance_LEwtd, fill = sublin_collapse)) +
+#   geom_col() +
+#   facet_wrap(~ LOCATION) +
+#   scale_x_discrete(drop = FALSE) +  # keep empty weeks
+#   labs(
+#     x = "year_epiweek", y = "Absolute-ish Abundance", fill = "sublineage",
+#     title = "SARS-CoV-2 Weekly Lineage Composition - Wastewater"
+#   ) +
+#   theme_minimal() +
+#   theme(
+#     axis.text.x = element_text(angle = 45, hjust = 1),
+#     panel.spacing = unit(0.75, "lines")
+#   ) +
+#   scale_fill_manual(values = fill_cols, drop = FALSE) +
+#   geom_text(
+#     aes(label = ifelse(abundance > 0.05, as.character(sublin_collapse), "")),
+#     position = position_stack(vjust = 0.5),
+#     size = 2.25, color = "white"
+#   ) +
+#   guides(
+#     fill = "none",
+#     color = guide_legend(title = "PCR conc\nquartile")
+#   )
 
 
 
@@ -659,9 +639,9 @@ ww_collapsed_complete |>
 
 
 # check for multiple samples per week
-ww_collapsed |>
-  count(time, LOCATION, sublin_collapse) |>
-  summarise(max_dups = max(n))
+# ww_collapsed |>
+#   count(time, LOCATION, sublin_collapse) |>
+#   summarise(max_dups = max(n))
 
 ww_locweek <- ww_collapsed |>
   # only needed if multiple samples/week somewhere
@@ -713,10 +693,10 @@ ww_citywide_weighted <- ww_locweek_complete |>
   )
 
 # checks
-ww_citywide_weighted |>
-  group_by(time) |>
-  summarise(sum_abundance = sum(abundance), .groups = "drop") |>
-  summarise(min = min(sum_abundance), max = max(sum_abundance))
+# ww_citywide_weighted |>
+#   group_by(time) |>
+#   summarise(sum_abundance = sum(abundance), .groups = "drop") |>
+#   summarise(min = min(sum_abundance), max = max(sum_abundance))
 
 # complete data for plotting
 ww_citywide_weighted_complete <- ww_citywide_weighted |>
@@ -763,11 +743,10 @@ ggsave("../draft_figures/p_RAxCity.jpg", p_RAxCity, width = 12, height = 6, dpi 
 
 
 
-###
-
-p_RAxClin
-p_RAxNB
-p_RAxCity
+# redundant re-print -- each plot was already printed once when built
+# p_RAxClin
+# p_RAxNB
+# p_RAxCity
 
 
 

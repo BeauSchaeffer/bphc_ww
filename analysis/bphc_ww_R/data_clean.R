@@ -80,11 +80,11 @@ baseload_ids <- baseload_ids |>
 ### cross checks
 
   # fastq files without metadata?
-baseload_ids$FQ_ID %in% ww_metadata$FASTQ_ID |> table()
+# baseload_ids$FQ_ID %in% ww_metadata$FASTQ_ID |> table()
   # all have metadata
 
   # metadata without fastq?
-ww_metadata$FASTQ_ID[!ww_metadata$FASTQ_ID %in% baseload_ids$FQ_ID]
+# ww_metadata$FASTQ_ID[!ww_metadata$FASTQ_ID %in% baseload_ids$FQ_ID]
   # 20 samples formatted like 2022-1021-91H06WW
 
 ww_metadata <- ww_metadata |> 
@@ -101,10 +101,10 @@ ww_metadata <- ww_metadata |>
   mutate(year_epiweek=as.numeric(year_epiweek)) |> 
   arrange(year_epiweek, LOCATION)
 
-counts <- ww_metadata |> 
-  count(LOCATION, year_epiweek) |>
-  arrange(year_epiweek, LOCATION) |>
-  mutate(year_epiweek = factor(year_epiweek))
+# counts <- ww_metadata |>
+#   count(LOCATION, year_epiweek) |>
+#   arrange(year_epiweek, LOCATION) |>
+#   mutate(year_epiweek = factor(year_epiweek))
 
   # notes RE Lower_Roxbury and South Boston
   # Lower_Roxbury - sampling did not start here until 2024
@@ -114,13 +114,13 @@ counts <- ww_metadata |>
   # for concentration data, compared L Rox to Rox to see if similar
   # could think about a weighted average
   
-counts |> filter(n>1) 
+# counts |> filter(n>1)
   # Charlestown 202334
   # Lower_Roxbury 202410
 
-ww_metadata |>
-  filter(LOCATION=="Charlestown" & year_epiweek=="202334" | 
-           LOCATION=="Lower Roxbury" & year_epiweek=="202410")
+# ww_metadata |>
+#   filter(LOCATION=="Charlestown" & year_epiweek=="202334" |
+#            LOCATION=="Lower Roxbury" & year_epiweek=="202410")
 
   # Charlestown 202334
   # could be mislabling, biobot did not have info
@@ -136,16 +136,16 @@ exclude <- ww_metadata |>
 
 ww_metadata <- ww_metadata |> filter(!FASTQ_ID %in% exclude$FASTQ_ID)
 
-p_counts <- ww_metadata |>
-  count(LOCATION, year_epiweek) |>
-  arrange(year_epiweek, LOCATION) |>
-  mutate(year_epiweek = factor(year_epiweek)) |>
-  ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(n))) +
-  geom_tile() +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_fill_manual(values = c("#4C9AED", "#654CED"), name="sample count")
-p_counts
+# p_counts <- ww_metadata |>
+#   count(LOCATION, year_epiweek) |>
+#   arrange(year_epiweek, LOCATION) |>
+#   mutate(year_epiweek = factor(year_epiweek)) |>
+#   ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(n))) +
+#   geom_tile() +
+#   theme_classic() +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   scale_fill_manual(values = c("#4C9AED", "#654CED"), name="sample count")
+# p_counts
 
 # ggsave("../figures/p_counts.jpg", p_counts, scale = 1.5)
 
@@ -167,27 +167,27 @@ ww_metadata <- ww_metadata[ww_metadata$FASTQ_ID %in% coverage_qc$sample,]
 ww_metadata <- ww_metadata |> 
   left_join(coverage_qc, by=c("FASTQ_ID"="sample"))
 
-# write_rds(ww_metadata, paste0(storage_dir, "meta_clean.rds")) # 2026-03-17
+write_rds(ww_metadata, paste0(storage_dir, "meta_clean.rds")) # 2026-07-23
 
   # check which have failed QC
 
-ww_metadata |>
-  arrange(year_epiweek, LOCATION) |>
-  mutate(year_epiweek = factor(year_epiweek)) |>
-  mutate(QC_ov_depth10 = ifelse(frac_genome_cov_10x < 0.5, 1,0),
-         QC_spk_depth10 = ifelse(spike_frac_cov_10x < 0.5, 1,0)) |> 
-  drop_na(QC_ov_depth10) |> # only baseload has been processed
-  ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(QC_spk_depth10))) +
-  geom_tile(color = "grey80", linewidth = 0.3) +
-  geom_text(aes(label=round(spike_frac_cov_10x, digits = 2)), size=1.5) +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_fill_manual(values = c("lightgreen", "red"), name="fail spike\n 50% @ 10x ?") +
-  ggtitle("QC report", subtitle = "labels = spike coverage > 10x")
+# ww_metadata |>
+#   arrange(year_epiweek, LOCATION) |>
+#   mutate(year_epiweek = factor(year_epiweek)) |>
+#   mutate(QC_ov_depth10 = ifelse(frac_genome_cov_10x < 0.5, 1,0),
+#          QC_spk_depth10 = ifelse(spike_frac_cov_10x < 0.5, 1,0)) |>
+#   drop_na(QC_ov_depth10) |> # only baseload has been processed
+#   ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(QC_spk_depth10))) +
+#   geom_tile(color = "grey80", linewidth = 0.3) +
+#   geom_text(aes(label=round(spike_frac_cov_10x, digits = 2)), size=1.5) +
+#   theme_classic() +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   scale_fill_manual(values = c("lightgreen", "red"), name="fail spike\n 50% @ 10x ?") +
+#   ggtitle("QC report", subtitle = "labels = spike coverage > 10x")
 
-ww_metadata |> 
-  select(frac_genome_cov_10x, spike_frac_cov_10x) |> 
-  plot() # pretty correlated
+# ww_metadata |>
+#   select(frac_genome_cov_10x, spike_frac_cov_10x) |>
+#   plot() # pretty correlated
 
 
 # Clinical data from GISAID -----------------------------------------------
@@ -205,7 +205,7 @@ clin_lin <- clin_lin |>
          year_epiweek = paste0(year, sprintf("%02d", epiweek))) |>
   mutate(year_epiweek=as.numeric(year_epiweek))
 
-# write_rds(clin_lin, paste0(storage_dir, "clin_lin.rds")) # 2026-02-05
+write_rds(clin_lin, paste0(storage_dir, "clin_lin.rds")) # 2026-07-23
 
 
 # WW PCR data -------------------------------------------------------------
@@ -245,9 +245,9 @@ pop_wts <- ww_pcr |>
   mutate(popwt = pop/sum(pop))
 
 
-# write_rds(pop_wts, paste0(storage_dir,"pop_wts.rds")) # 2026-02-10
+write_rds(pop_wts, paste0(storage_dir,"pop_wts.rds")) # 2026-07-23
 
-rm(list=setdiff(ls(), c("clin_lin","ww_metadata","ww_pcr","pop_wts")))
+rm(list=setdiff(ls(), c("clin_lin","ww_metadata","ww_pcr","pop_wts","storage_dir")))
 
 
 # create general weights
@@ -267,7 +267,7 @@ conc_wts <- ww_pcr |>
   mutate(logeff = log(meaneffCopiesL),
          lograw = log(meanrawCopiesL))
 
-# write_rds(conc_wts, paste0(storage_dir,"conc_wts.rds")) # 2026-03-09
+write_rds(conc_wts, paste0(storage_dir,"conc_wts.rds")) # 2026-07-23
 
 
 
