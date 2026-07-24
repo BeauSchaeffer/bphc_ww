@@ -24,62 +24,6 @@ pop_wts <- read_rds(paste0(storage_dir, "pop_wts.rds"))
 conc_wts <- read_rds(paste0(storage_dir, "conc_wts.rds"))
 
 
-# # Parse demix -------------------------------------------------------------
-# 
-# 
-# ### Code credit for parsing the demix output: https://github.com/a-roguet
-# 
-# results<-read.table("/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/freyja_aggregate/aggregated.tsv", fill = TRUE, sep = "\t", h=T)
-# results<-as.data.frame(sapply(results, function(x) str_replace_all(x, "[',()\\]\\[]", ""))) # Removed the unwanted character: [], () and commas
-# results<-as.data.frame(sapply(results, function(x) trimws(gsub("\\s+", " ", x)))) # Removed double spaces
-# 
-# ### Summarized data
-# summarized<-as.data.frame(setDT(tstrsplit(as.character(results$summarized), " ", fixed=TRUE))[]) # Extract Summarized data
-# summarized$sample<-results$X
-# 
-# for(i in 1:((ncol(summarized)-1)/2)){
-#   if(i==1){
-#     summarized.final<-summarized[,c(ncol(summarized),1:2)]
-#   } else {
-#     start=i*2-1; end=i*2
-#     summarized.final<-rbind(summarized.final, setNames(summarized[,c(ncol(summarized), start:end)], names(summarized.final)))
-#   }
-# }
-# summarized.final<-summarized.final[complete.cases(summarized.final), ]
-# names(summarized.final)<-c("Sample", "lineage", "abundance")
-# 
-# 
-# ### Sublineages data
-# for(i in 1:nrow(results)){
-#   lineages.temp<-as.data.frame(t(setDT(tstrsplit(as.character(results[i, 3]), " ", fixed=TRUE))[]))
-#   abundances.temp<-as.data.frame(t(setDT(tstrsplit(as.character(results[i, 4]), " ", fixed=TRUE))[]))
-#   sample.temp<-rep(results[i, 1], nrow(lineages.temp))
-#   if(i==1){
-#     sublineages.final<-cbind(sample.temp, lineages.temp, abundances.temp)
-#   } else {
-#     sublineages.final<-rbind(sublineages.final, cbind(sample.temp, lineages.temp, abundances.temp))
-#   }
-# }
-# names(sublineages.final)<-c("Sample", "sublineage", "abundance")
-# 
-# ### Code credit for parsing the demix output: https://github.com/a-roguet
-# 
-# ### clean up parsed output
-# 
-# rm(abundances.temp, lineages.temp, results, summarized, summarized.final, end, i, sample.temp, start)
-# 
-# ### files created: summarized.final, sublineages.final
-# 
-# ### clean up sample names
-# sublineages.final$Sample <- sub("^([0-9]+).*", "\\1", sublineages.final$Sample)
-# 
-# ### Freyja collapse lineage option results in classifications like "BA.4.6-like" or "BA.5.2-like2"
-# ### remove "-likeN" suffix
-# 
-# sublineages.final <- sublineages.final %>%
-#   mutate(sublineage = str_remove(as.character(sublineage), "-like[0-9]*$"))
-
-
 # Parse demix as function for multi-batch ---------------------------------
 
 parse_freyja_aggregate <- function(path){
@@ -109,7 +53,7 @@ parse_freyja_aggregate <- function(path){
   ### Freyja collapse lineage option results in classifications like "BA.4.6-like" or "BA.5.2-like2"
   ### remove "-likeN" suffix
 
-  sublineages.final <- sublineages.final %>%
+  sublineages.final <- sublineages.final |>
     mutate(sublineage = str_remove(as.character(sublineage), "-like[0-9]*$"))
 
   sublineages.final
@@ -148,21 +92,35 @@ qc_flags_nb <- qc_flags_nb |> filter(time %in% sublin_meta$year_epiweek)
 # Collapsing sublineages --------------------------------------------------
 
 
+# lineages always retained, and grouped at their own prefix rather than the
+# default 2-segment truncation (e.g. "BA.2.86" would otherwise fold into
+# "BA.2") -- shared by parent_group() and keep_threshold_time() below
+force_keep_lineages <- c("BA.2.86")
+
 ### fx - extract parent group
 ### this fx used within keep_threshold_time()
 
-parent_group <- function(x) {
-  out <- str_extract(x, "^[A-Za-z]+\\.[0-9]+")
-  ifelse(is.na(out), x, out)  # keep full token if no match (recombinants)
+parent_group <- function(x, extended_groups = force_keep_lineages) {
+  default <- str_extract(x, "^[A-Za-z]+\\.[0-9]+")
+  default <- ifelse(is.na(default), x, default)  # keep full token if no match (recombinants)
+
+  group <- default
+  for (g in extended_groups) {
+    is_g <- !is.na(x) & (x == g | startsWith(x, paste0(g, ".")))
+    group[is_g] <- g
+  }
+  group
 }
 
 ### fx - only keep parent groups that exceed a threshold
 ### used within collapse_sublineages_timeaware()
 
-keep_threshold_time <- function(dat, threshold = 0.1, 
+keep_threshold_time <- function(dat, threshold = 0.1,
                                 time_col = year_epiweek,
-                                suffix = ".x") {
-  dat |> 
+                                suffix = ".x",
+                                force_keep = character(0)) {
+
+  dat |>
     mutate(group = parent_group(sublineage), # create parent lineage
            # format variables
            abundance = as.numeric(abundance),
@@ -172,21 +130,16 @@ keep_threshold_time <- function(dat, threshold = 0.1,
     group_by(Sample, time, group) |>
     summarise(ra = sum(abundance, na.rm = TRUE), .groups = "drop") |>
     # for each week,lineage group, take max RA observed in any sample that week
-    group_by(time, group) |> 
-    summarise(max_ra_any_sample = max(ra, na.rm = TRUE), .groups = "drop") |> 
-    arrange(group, time) |> 
-    group_by(group) |> 
-    # once lineages reach threshold RA anywhere, flag with keep_by_time==TRUE moving forward
-    mutate(keep_by_time = cummax(max_ra_any_sample >= threshold)) |>
-    # once a lineage reaches the threshold it is named moving forward, rather than "other"
-    ungroup() |> 
+    group_by(time, group) |>
+    summarise(max_ra_any_sample = max(ra, na.rm = TRUE), .groups = "drop") |>
+    group_by(group) |>
+    # uses future info intentionally (retrospective analysis, not live
+    # surveillance): a group that ever clears threshold is named for its
+    # entire history
+    mutate(keep_by_time = any(max_ra_any_sample >= threshold) | group %in% force_keep) |>
+    ungroup() |>
     transmute(time, group, keep_by_time,
               label = paste0(group, suffix))
-  
-  # output is a "keep table" with a row for every group/time combo
-  # keep_by_time==TRUE starting the first year_epiweek the group reaches threshold,
-  # and for all later weeks where the group is observed
-  
 }
 
 # view keepers
@@ -197,20 +150,20 @@ keep_threshold_time <- function(dat, threshold = 0.1,
 # use the keep table keyed by (time, group), and collapse to "other"
 # until keep_by_time becomes TRUE.
 
-# keep_tbl from combined data can be supplied 
-# or
-# keep_tbl can be computed internally 
+# keep_tbl can be supplied (e.g. from combined data) or computed internally
 
 collapse_sublineages_timeaware <- function(df, threshold = 0.1,
                                            other = "other",
                                            time_col = year_epiweek,
                                            suffix = ".x",
-                                           keep_tbl = NULL) {
-  
+                                           keep_tbl = NULL,
+                                           force_keep = character(0)) {
+
   # if no keep_tbl provided, generate one
   if (is.null(keep_tbl)) {
     keep_tbl <- keep_threshold_time(df, threshold = threshold,
-                                    time_col = {{ time_col }}, suffix = suffix)
+                                    time_col = {{ time_col }}, suffix = suffix,
+                                    force_keep = force_keep)
   }
   
   df |>
@@ -254,22 +207,13 @@ clinical <- clin_lin |>
          week = year_epiweek %% 100,
          year_first = ymd(paste0(year, "-01-01")) + weeks(week - 1),
          SAMPLING_DATE = floor_date(year_first, "week", week_start = 7),
-         
-         # placeholder columns so collapse_sublineages_timeaware() functions properly
-         LOCATION = NA, 
-         Sample=NA,
-         epiweek=week)
+         epiweek = week,
+         # pseudo Sample/LOCATION so collapse_sublineages_timeaware() functions properly
+         Sample = "clinical_agg",
+         LOCATION = "clinical")
 
 ### remove later - filter to relevant time that samples have been processed
 # clinical <- clinical |> filter(year_epiweek %in% sublin_meta$year_epiweek)
-
-### pseudo variables
-
-clinical <- clinical |>
-  mutate(
-    Sample = "clinical_agg",
-    LOCATION = "clinical"
-  )
 
 
 
@@ -280,11 +224,11 @@ combined_for_keep <- bind_rows(
   clinical   |> select(Sample, sublineage, abundance, year_epiweek)
 )
 
-
 keep_tbl <- keep_threshold_time(combined_for_keep,
                                 threshold = 0.2,
                                 time_col = year_epiweek,
-                                suffix = ".x")
+                                suffix = ".x",
+                                force_keep = force_keep_lineages)
 
 ww_collapsed <- collapse_sublineages_timeaware(sublin_meta,
                                                threshold = 0.2,
@@ -297,6 +241,31 @@ clin_collapsed <- collapse_sublineages_timeaware(clinical,
                                                  time_col = year_epiweek,
                                                  suffix = ".x",
                                                  keep_tbl = keep_tbl)
+
+
+# Manual collapsing ---------------------------------------------------------
+
+# merge already-retained labels into one classifier (source labels use the
+# final sublin_collapse format, e.g. "KP.1.x")
+manual_collapse_map <- list(
+  "KP.x" = c("KP.1.x", "KP.2.x", "KP.3.x")
+)
+
+apply_manual_collapse <- function(df, collapse_map) {
+  relabel <- as.character(df$sublin_collapse)
+  for (dest in names(collapse_map)) {
+    relabel[relabel %in% collapse_map[[dest]]] <- dest
+  }
+  df |>
+    mutate(sublin_collapse = relabel) |>
+    # re-sum abundance now that multiple source labels may share a destination
+    group_by(Sample, time, LOCATION, epiweek, year, sublin_collapse) |>
+    summarise(abundance = sum(abundance, na.rm = TRUE), .groups = "drop")
+}
+
+ww_collapsed   <- apply_manual_collapse(ww_collapsed, manual_collapse_map)
+clin_collapsed <- apply_manual_collapse(clin_collapsed, manual_collapse_map)
+
 
 write_rds(ww_collapsed, "../data/ww_collapsed.rds")
 # write_rds(clin_collapsed, "../data/clin_collapsed.rds") # no downstream readers
@@ -381,7 +350,9 @@ p_RAxClin
 
 # Plot WW -----------------------------------------------------------------
 
-ww_collapsed_complete <- ww_collapsed |>
+# separate object from the ww_collapsed_complete saved above: this one is
+# completed/leveled for plotting only, not written to disk
+ww_collapsed_complete_plot <- ww_collapsed |>
   mutate(time = as.character(time)) |>
   complete(
     time = year_epiweek_levels,
@@ -392,7 +363,7 @@ ww_collapsed_complete <- ww_collapsed |>
   mutate(time = factor(time, levels = year_epiweek_levels))
 
 
-ww_collapsed_complete <- ww_collapsed_complete |>
+ww_collapsed_complete_plot <- ww_collapsed_complete_plot |>
   mutate(sublin_collapse = factor(sublin_collapse, levels = lin_levels))
 
 ### plot the "complete" data for ww
@@ -411,7 +382,9 @@ conc_label <- conc_wts |>
                         include.lowest = TRUE))
 
 
-p_RAxNB <- ww_collapsed_complete |>
+batch_subtitle <- "2026-06-13 batch 1+2"
+
+p_RAxNB <- ww_collapsed_complete_plot |>
   ggplot(aes(x = time, y = abundance, fill = sublin_collapse)) +
   geom_col() +
   geom_col(
@@ -441,7 +414,7 @@ p_RAxNB <- ww_collapsed_complete |>
   labs(
     x = "year_epiweek", y = "Relative Abundance", fill = "sublineage",
     title = "SARS-CoV-2 Weekly Lineage Composition - Wastewater",
-    subtitle = "2026-06-13 batch 1+2"
+    subtitle = batch_subtitle
   ) +
   theme_minimal() +
   theme(
@@ -465,11 +438,11 @@ p_RAxNB
 
 ### separate figures rather than multipanel
 
-locations <- unique(ww_collapsed_complete$LOCATION)
+locations <- unique(ww_collapsed_complete_plot$LOCATION)
 
 plots_by_location <- setNames(
   lapply(locations, function(loc) {
-    ww_collapsed_complete |>
+    ww_collapsed_complete_plot |>
       filter(LOCATION == loc) |>
       ggplot(aes(x = time, y = abundance, fill = sublin_collapse)) +
       geom_col() +
@@ -501,7 +474,7 @@ plots_by_location <- setNames(
       labs(
         x = "year_epiweek", y = "Relative Abundance", fill = "sublineage",
         title = paste("SARS-CoV-2 Weekly Lineage Composition -", loc),
-        subtitle = "2026-06-13 batch 1+2"
+        subtitle = batch_subtitle
       ) +
       theme_minimal() +
       theme(
@@ -529,13 +502,11 @@ lapply(locations, function(loc) {
 
 plots_by_location_concwt <- setNames(
   lapply(locations, function(loc) {
-    ww_collapsed_complete |>
-      mutate(year_epiweek = paste0(year, sprintf("%02d", epiweek)),
-             year_epiweek = ifelse(year_epiweek=="NANA",NA,year_epiweek),
-             year_epiweek=as.numeric(year_epiweek)) |>
+    ww_collapsed_complete_plot |>
+      mutate(year_epiweek = as.numeric(as.character(time))) |>
       left_join(conc_wts, by=c("LOCATION", "year_epiweek")) |>
       mutate(abundance_LEwtd = abundance*logeff,
-             abundance_Ewtd = abundance*meaneffCopiesL) |> 
+             abundance_Ewtd = abundance*meaneffCopiesL) |>
       filter(LOCATION == loc) |>
       ggplot(aes(x = time, y = abundance_LEwtd, fill = sublin_collapse)) +
       geom_col() +
@@ -569,7 +540,7 @@ plots_by_location_concwt <- setNames(
       labs(
         x = "year_epiweek", y = "Absolute-ish Abundance", fill = "sublineage",
         title = paste("SARS-CoV-2 Weekly Lineage Composition -", loc),
-        subtitle = "2026-06-13 batch 1+2"
+        subtitle = batch_subtitle
       ) +
       theme_minimal() +
       theme(
@@ -591,48 +562,6 @@ lapply(locations, function(loc) {
     width = 14, height = 6, dpi = 300
   )
 })
-
-
-
-
-
-### concentration weighted
-### exploratory multi-panel version, superseded by the per-location
-### concwt loop above (RA_concwt_plots/) -- never saved, unassigned
-
-# ww_collapsed_complete |>
-#   mutate(year_epiweek = paste0(year, sprintf("%02d", epiweek)),
-#          year_epiweek = ifelse(year_epiweek=="NANA",NA,year_epiweek),
-#          year_epiweek=as.numeric(year_epiweek)) |>
-#   left_join(conc_wts, by=c("LOCATION", "year_epiweek")) |>
-#   mutate(abundance_LEwtd = abundance*logeff,
-#          abundance_Ewtd = abundance*meaneffCopiesL) |>
-#
-#   ggplot(aes(x = time, y = abundance_LEwtd, fill = sublin_collapse)) +
-#   geom_col() +
-#   facet_wrap(~ LOCATION) +
-#   scale_x_discrete(drop = FALSE) +  # keep empty weeks
-#   labs(
-#     x = "year_epiweek", y = "Absolute-ish Abundance", fill = "sublineage",
-#     title = "SARS-CoV-2 Weekly Lineage Composition - Wastewater"
-#   ) +
-#   theme_minimal() +
-#   theme(
-#     axis.text.x = element_text(angle = 45, hjust = 1),
-#     panel.spacing = unit(0.75, "lines")
-#   ) +
-#   scale_fill_manual(values = fill_cols, drop = FALSE) +
-#   geom_text(
-#     aes(label = ifelse(abundance > 0.05, as.character(sublin_collapse), "")),
-#     position = position_stack(vjust = 0.5),
-#     size = 2.25, color = "white"
-#   ) +
-#   guides(
-#     fill = "none",
-#     color = guide_legend(title = "PCR conc\nquartile")
-#   )
-
-
 
 
 # Plot WW citywide --------------------------------------------------------
@@ -740,14 +669,3 @@ p_RAxCity <- ww_citywide_weighted_complete |>
 p_RAxCity
 
 ggsave("../draft_figures/p_RAxCity.jpg", p_RAxCity, width = 12, height = 6, dpi = 300)
-
-
-
-# redundant re-print -- each plot was already printed once when built
-# p_RAxClin
-# p_RAxNB
-# p_RAxCity
-
-
-
-
