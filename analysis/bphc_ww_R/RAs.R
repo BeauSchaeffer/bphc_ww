@@ -17,6 +17,8 @@ storage_dir <- "../data/"
 
 ww_metadata <- read_rds(paste0(storage_dir, "meta_clean.rds"))
 
+# derived from var_surv_less_filt.tsv (GISAID clinical variant export),
+# downloaded ~2025-03-29 per that file's timestamp (not otherwise recorded)
 clin_lin <- read_rds(paste0(storage_dir, "clin_lin.rds"))
 
 pop_wts <- read_rds(paste0(storage_dir, "pop_wts.rds"))
