@@ -288,7 +288,7 @@ ww_collapsed_complete <- ww_collapsed |>
          year_epiweek = as.numeric(as.character(time))) |>
   left_join(conc_wts, by = c("LOCATION", "year_epiweek"))
 
-write_rds(ww_collapsed_complete, "../data/ww_collapsed_complete.rds") ### have not yet rewritten 07-23 after edits
+write_rds(ww_collapsed_complete, "../data/ww_collapsed_complete.rds")
 
 # stable lineage order for all plots
 lin_levels <- sort(unique(c(
@@ -345,7 +345,7 @@ p_RAxClin <- clin_collapsed_complete |>
   guides(fill="none")
 
 p_RAxClin
-# ggsave("../draft_figures/p_RAxClin.jpg", p_RAxClin, width = 12, height = 6, dpi = 300)
+ggsave("../draft_figures/p_RAxClin.jpg", p_RAxClin, width = 12, height = 6, dpi = 300)
 
 
 # Plot WW -----------------------------------------------------------------
@@ -434,7 +434,7 @@ p_RAxNB <- ww_collapsed_complete_plot |>
   )
 
 p_RAxNB
-# ggsave("../draft_figures/p_RAxNB.jpg", p_RAxNB, width = 22, height = 14, dpi = 300)
+ggsave("../draft_figures/p_RAxNB.jpg", p_RAxNB, width = 22, height = 14, dpi = 300)
 
 ### separate figures rather than multipanel
 
@@ -486,7 +486,7 @@ plots_by_location <- setNames(
   locations
 )
 
-# plots_by_location[[locations[12]]] # interactive preview only
+# plots_by_location[[locations[1]]] # interactive preview only
 
 
 lapply(locations, function(loc) {
