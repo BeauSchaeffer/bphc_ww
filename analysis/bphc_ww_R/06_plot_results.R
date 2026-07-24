@@ -30,6 +30,11 @@ dist_mat      <- read_rds(paste0(out_dir, "dist_mat.rds"))
 pop_vec       <- read_rds(paste0(out_dir, "pop_vec.rds"))
 catchments    <- read_rds(paste0(out_dir, "catchments.rds"))
 cent_const    <- read_rds(paste0(out_dir, "centering.rds"))
+# from lineage_timing.R; mean_lag = mean arrival lag in weeks (across lineages)
+# after that lineage's citywide first detection, per catchment
+detection_timing <- read_rds(paste0(out_dir, "neighborhood_detection_timing.rds"))
+catchments <- catchments |>
+  left_join(detection_timing |> select(LOCATION, mean_lag), by = "LOCATION")
 
 n_loc     <- nrow(loc_index)
 n_lineage <- nrow(lineage_index)
@@ -83,7 +88,7 @@ edges <- map_dfr(seq_len(nrow(prs)), function(p) {
 n_resolved <- sum(edges$resolved)
 
 fig1 <- ggplot() +
-  geom_sf(data = catchments, fill = "grey96", color = "grey80", linewidth = 0.3) +
+  geom_sf(data = catchments, aes(fill = mean_lag), color = "grey80", linewidth = 0.3) +
   geom_segment(data = edges,
                aes(x = x, y = y, xend = xend, yend = yend,
                    color = med_logK, linetype = resolved, alpha = resolved,
@@ -92,6 +97,8 @@ fig1 <- ggplot() +
              color = "grey20", fill = "white", shape = 21, stroke = 0.6) +
   geom_text(data = node, aes(x = x, y = y, label = LOCATION),
             size = 2.6, vjust = -1.1, color = "grey20") +
+  scale_fill_gradient(low = "#f7fbff", high = "#08519c",
+                      name = "mean detection\nlag (weeks)") +
   scale_color_gradient2(low = "#2c7bb6", mid = "grey75", high = "#d7191c",
                         midpoint = 0, name = "median log-kernel") +
   scale_linetype_manual(values = c(`FALSE` = "dashed", `TRUE` = "solid"),
