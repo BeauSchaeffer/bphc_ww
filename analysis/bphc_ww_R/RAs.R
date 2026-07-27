@@ -346,7 +346,6 @@ p_RAxClin <- clin_collapsed_complete |>
   ) +
   guides(fill="none")
 
-p_RAxClin
 ggsave("../draft_figures/p_RAxClin.jpg", p_RAxClin, width = 12, height = 6, dpi = 300)
 
 
@@ -435,7 +434,6 @@ p_RAxNB <- ww_collapsed_complete_plot |>
     color = guide_legend(title = "PCR conc\nquartile")
   )
 
-p_RAxNB
 ggsave("../draft_figures/p_RAxNB.jpg", p_RAxNB, width = 22, height = 14, dpi = 300)
 
 ### separate figures rather than multipanel
@@ -667,7 +665,5 @@ p_RAxCity <- ww_citywide_weighted_complete |>
     size = 2.25, color = "white", angle=90
   ) +
   guides(fill="none")
-
-p_RAxCity
 
 ggsave("../draft_figures/p_RAxCity.jpg", p_RAxCity, width = 12, height = 6, dpi = 300)
