@@ -17,13 +17,13 @@ library(lubridate)
 #   FALSE -> pool all WW samples that month equally (each sample counted
 #            once, regardless of neighborhood) -- matches the unweighted
 #            "detected anywhere" citywide definition used for the Jaccard
-#            index in diversity_analysis.R
+#            index in jaccard_analysis.R
 #   TRUE  -> population-weight neighborhoods (each neighborhood's monthly
 #            composition weighted by pop_wts.rds, as in RAs.R's
 #            ww_citywide_weighted)
 ww_pop_weighted <- FALSE
 
-# threshold for the parent-group collapse below (mirrors diversity_analysis.R)
+# threshold for the parent-group collapse below (mirrors jaccard_analysis.R)
 collapse_threshold <- 0.05
 
 clinical_decline_date <- ymd("2023-03-01")

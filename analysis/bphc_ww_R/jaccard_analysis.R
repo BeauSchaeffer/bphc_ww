@@ -1,4 +1,4 @@
-# diversity_analysis.R
+# jaccard_analysis.R
 
 # ---- PATHS (edit these) ------------------------------------------------------
 storage_dir <- "../data/"
