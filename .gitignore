@@ -49,6 +49,7 @@ coverage/
 # sync scripts
 informatics/scripts/sync_storage.sh
 informatics/scripts/sync_draft_figs.sh
+informatics/scripts/sync_variants.sh
 
 # exploratory scripts
 analysis/bphc_ww_R/meta_exp.R
