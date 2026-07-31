@@ -73,18 +73,18 @@ sublineages.final <- bind_rows(
 sublin_meta <- left_join(sublineages.final, ww_metadata, by=c("Sample"="FASTQ_ID")) |> 
   mutate(abundance=as.numeric(abundance))
 
-# sublin_meta$spike_frac_cov_10x |> hist()
-# sublin_meta$frac_genome_cov_10x |> hist()
+# sublin_meta$spike_breadth_d10 |> hist()
+# sublin_meta$breadth_d10 |> hist()
 
 ### Apply QC filters at this stage
 
-# sublin_meta <- sublin_meta |> 
-#   filter(spike_frac_cov_10x >= 0.75)
+# sublin_meta <- sublin_meta |>
+#   filter(spike_breadth_d10 >= 0.75)
 
 
 qc_flags_nb <- ww_metadata |>
   mutate(time = as.character(year_epiweek),
-         low_spike_qc = spike_frac_cov_10x <= 0.5 | is.na(spike_frac_cov_10x)) |>
+         low_spike_qc = spike_breadth_d10 <= 0.5 | is.na(spike_breadth_d10)) |>
   group_by(LOCATION, time) |>
   summarise(low_spike_qc = any(low_spike_qc), .groups = "drop")
 

@@ -19,38 +19,41 @@ clin_lin <- read_tsv(paste0(storage_dir, "var_surv_less_filt.tsv"))
 
 ww_pcr <- read_csv(paste0(storage_dir, "pcr_final_baseload.csv"))
 
-## batch 1 seq coverage cleaned within scratch folder
-## renaming coverage.rds to batch1_coverage.rds 2026-06-12
+# Sequencing coverage QC --------------------------------------------------
 
-# coverage_dir <- "../../coverage/"
-# coverage <- list.files(coverage_dir, pattern = "\\.qc\\.tsv$", full.names = TRUE) |>
-#   map(read_tsv, show_col_types = FALSE) |>
-#   list_rbind()
-# coverage <- coverage |> mutate(sample=as.character(sample))
-# 
-# write_rds(coverage, paste0(storage_dir, "coverage.rds")) # 2026-03-31
-## see note above about renaming
-# rm(coverage_dir, coverage)
+# Rebuilt from the per-sample .qc.tsv files that sync_storage.sh pulls into
+# analysis/baseload_batch{1,2}_outputs/coverage/. Idempotent: rerun after any
+# 04.1_coverage_qc.sh rerun to pick up schema changes (e.g. the depth_* /
+# breadth_dN columns). Both batches must be rerun together -- a batch left on
+# the old schema silently becomes all-NA for the new breadth columns.
 
-## batch 2 seq coverage
+read_coverage_dir <- function(dir) {
+  files <- list.files(dir, pattern = "\\.qc\\.tsv$", full.names = TRUE)
+  if (length(files) == 0) stop("no .qc.tsv files found in ", dir)
+  files |>
+    map(read_tsv, show_col_types = FALSE) |>
+    list_rbind() |>
+    mutate(sample = as.character(sample))
+}
 
-# batch2_coverage_dir <- "/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/baseload_batch2_outputs/coverage/"
-# batch2_coverage <- list.files(batch2_coverage_dir, pattern = "\\.qc\\.tsv$", full.names = TRUE) |>
-#   map(read_tsv, show_col_types = FALSE) |>
-#   list_rbind()
-# batch2_coverage <- batch2_coverage |> mutate(sample=as.character(sample))
-# 
-# write_rds(batch2_coverage, paste0(storage_dir, "batch2_coverage.rds")) # 2026-06-12
-# 
-# batch1_coverage <- readRDS(paste0(storage_dir, "batch1_coverage.rds"))
-# 
-# compiled_coverage <- bind_rows(batch1_coverage, batch2_coverage)
-# 
-# write_rds(compiled_coverage, paste0(storage_dir, "compiled_coverage.rds")) # 2026-06-12
-# 
-# rm(batch2_coverage_dir,batch2_coverage,batch1_coverage,compiled_coverage)
+batch1_coverage <- read_coverage_dir("../baseload_batch1_outputs/coverage/")
+batch2_coverage <- read_coverage_dir("../baseload_batch2_outputs/coverage/")
 
-coverage_qc <- readRDS(paste0(storage_dir, "compiled_coverage.rds"))
+write_rds(batch1_coverage, paste0(storage_dir, "batch1_coverage.rds"))
+write_rds(batch2_coverage, paste0(storage_dir, "batch2_coverage.rds"))
+
+# guard: mismatched schemas mean one batch was not rerun
+if (!setequal(names(batch1_coverage), names(batch2_coverage)))
+  stop("batch1/batch2 coverage columns differ -- rerun 04.1_coverage_qc.sh for both batches.\n",
+       "  only in batch1: ", paste(setdiff(names(batch1_coverage), names(batch2_coverage)), collapse = ", "), "\n",
+       "  only in batch2: ", paste(setdiff(names(batch2_coverage), names(batch1_coverage)), collapse = ", "))
+
+compiled_coverage <- bind_rows(batch1_coverage, batch2_coverage)
+write_rds(compiled_coverage, paste0(storage_dir, "compiled_coverage.rds"))
+
+rm(batch1_coverage, batch2_coverage)
+
+coverage_qc <- compiled_coverage
 
 
 # Wastewater metadata -----------------------------------------------------
@@ -174,19 +177,19 @@ write_rds(ww_metadata, paste0(storage_dir, "meta_clean.rds")) # 2026-07-23
 # ww_metadata |>
 #   arrange(year_epiweek, LOCATION) |>
 #   mutate(year_epiweek = factor(year_epiweek)) |>
-#   mutate(QC_ov_depth10 = ifelse(frac_genome_cov_10x < 0.5, 1,0),
-#          QC_spk_depth10 = ifelse(spike_frac_cov_10x < 0.5, 1,0)) |>
+#   mutate(QC_ov_depth10 = ifelse(breadth_d10 < 0.5, 1,0),
+#          QC_spk_depth10 = ifelse(spike_breadth_d10 < 0.5, 1,0)) |>
 #   drop_na(QC_ov_depth10) |> # only baseload has been processed
 #   ggplot(aes(x=year_epiweek, y=LOCATION, fill=as.factor(QC_spk_depth10))) +
 #   geom_tile(color = "grey80", linewidth = 0.3) +
-#   geom_text(aes(label=round(spike_frac_cov_10x, digits = 2)), size=1.5) +
+#   geom_text(aes(label=round(spike_breadth_d10, digits = 2)), size=1.5) +
 #   theme_classic() +
 #   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
 #   scale_fill_manual(values = c("lightgreen", "red"), name="fail spike\n 50% @ 10x ?") +
 #   ggtitle("QC report", subtitle = "labels = spike coverage > 10x")
 
 # ww_metadata |>
-#   select(frac_genome_cov_10x, spike_frac_cov_10x) |>
+#   select(breadth_d10, spike_breadth_d10) |>
 #   plot() # pretty correlated
 
 
