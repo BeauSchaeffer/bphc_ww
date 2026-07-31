@@ -110,18 +110,22 @@ comm -12 <(sort ids.txt) /tmp/have_depths.txt > ids_step.txt
 wc -l ids_step.txt        # expect 685 for batch 2, 305 for batch 1
 ```
 
-Then temporarily point the step at it. The scripts read `ids.txt` by name, so
-either swap the file or pass a scoped list:
+Then point the step at it with `--export`. `SAMPLES` defaults to `ids.txt` but any
+value in the environment wins:
 
 ```bash
-cp ids.txt ids_full.txt && cp ids_step.txt ids.txt
-sbatch --array=0-$(($(wc -l < ids.txt)-1)) $REPO/informatics/scripts/04.1_coverage_qc.sh
-# when the job finishes:
-mv ids_full.txt ids.txt
+sbatch --export=ALL,SAMPLES=ids_step.txt \
+       --array=0-$(($(wc -l < ids_step.txt)-1)) \
+       $REPO/informatics/scripts/04.1_coverage_qc.sh
 ```
 
-Running against the full `ids.txt` instead is *safe but noisy* -- the 16 samples
-without inputs fail loudly with "depth file not found" and write nothing.
+**Never swap `ids.txt` in place while an array is queued.** Each task reads the
+file when *it* starts, not when the array is submitted, so renaming the file
+mid-drain feeds the wrong list to later tasks. `--export` avoids the problem
+entirely. Keep `ALL` so the conda environment still propagates.
+
+Running against the full `ids.txt` instead is *safe but noisy* -- samples without
+inputs fail loudly with "depth file not found" and write nothing.
 
 Do this for **both batches** before syncing.
 
@@ -139,15 +143,14 @@ ls freyja_demix/*_demix.tsv 2>/dev/null | xargs -n1 basename | sed 's/_demix\.ts
 comm -23 <(sort ids.txt) /tmp/done.txt > ids_new.txt
 wc -l ids_new.txt
 
-cp ids.txt ids_full.txt && cp ids_new.txt ids.txt
-for s in 01_fastp_trim 02_align_bowtie2 03_ivar_trim_V4.1 04_freyja_variants 04.1_coverage_qc 05_freyja_demix; do
-  echo "submit $s with --array=0-$(($(wc -l < ids.txt)-1))"
-done
-mv ids_full.txt ids.txt
+N=$(($(wc -l < ids_new.txt)-1))
+sbatch --export=ALL,SAMPLES=ids_new.txt --array=0-$N $REPO/informatics/scripts/01_fastp_trim.sh
+# ...then 02, 03_ivar_trim_V4.1, 04, 04.1, 05 the same way
 ```
 
 Submit each step only after the previous one completes -- or chain them with
-`sbatch --dependency=afterok:<jobid>`.
+`sbatch --dependency=afterok:<jobid>`. As in Scenario A, use `--export` rather
+than swapping `ids.txt`.
 
 **Then rerun step 6.** It aggregates the whole `freyja_demix/` directory, so the
 existing `aggregated.tsv` is stale the moment you add any demix file.

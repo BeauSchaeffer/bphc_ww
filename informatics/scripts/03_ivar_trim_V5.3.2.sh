@@ -15,7 +15,7 @@ conda activate /n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/ivar
 # ids.txt lives in the batch working directory, so one script serves both
 # batches without editing -- see informatics/REPROCESSING.md.
 # NOTE: this is the ARTIC v5.3.2 script -- run it only from a batch 2 directory.
-SAMPLES="ids.txt"
+SAMPLES="${SAMPLES:-ids.txt}"
 sample=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "$SAMPLES")
 
 # guard: array range longer than the sample list, or --array not passed
