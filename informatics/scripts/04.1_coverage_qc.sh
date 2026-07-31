@@ -6,11 +6,18 @@
 #SBATCH --job-name=coverage_qc
 #SBATCH --output=logs/coverage_qc_%A_%a.out
 #SBATCH --error=logs/coverage_qc_%A_%a.err
-#SBATCH --array=0-684   # <-- Update to match number of samples ###** UPDATE **###
+#SBATCH --array=0-0   # fallback only; pass --array at submit ###** UPDATE **###
 
-# define samples file and generate sample ID from array index
-SAMPLES="/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/data/baseload_batch2_ids.txt"   ###** UPDATE **### batch1 uses samples.txt
+# ids.txt lives in the batch working directory, so one script serves both
+# batches without editing -- see informatics/REPROCESSING.md
+SAMPLES="ids.txt"
 sample=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "$SAMPLES")
+
+# guard: array range longer than the sample list, or --array not passed
+if [ -z "$sample" ]; then
+    echo "Error: no sample at index ${SLURM_ARRAY_TASK_ID} in $SAMPLES"
+    exit 1
+fi
 
 # define input and output paths
 depth_file="freyja_variants/${sample}_depths.tsv"

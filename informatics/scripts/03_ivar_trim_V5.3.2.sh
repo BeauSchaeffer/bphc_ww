@@ -6,15 +6,23 @@
 #SBATCH --job-name=ivar_trim
 #SBATCH --output=logs/ivar_trim_%A_%a.out
 #SBATCH --error=logs/ivar_trim_%A_%a.err
-#SBATCH --array=0-685   # <-- Update to match number of samples ###** UPDATE **###
+#SBATCH --array=0-0   # fallback only; pass --array at submit ###** UPDATE **###
 
 # load Conda and activate local environment
 source ~/.bashrc
 conda activate /n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/envs/ivar
 
-# define samples file and generate sample ID from array index
-SAMPLES="/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer/bphc_ww/data/baseload_batch2_ids.txt"
+# ids.txt lives in the batch working directory, so one script serves both
+# batches without editing -- see informatics/REPROCESSING.md.
+# NOTE: this is the ARTIC v5.3.2 script -- run it only from a batch 2 directory.
+SAMPLES="ids.txt"
 sample=$(sed -n "$((SLURM_ARRAY_TASK_ID + 1))p" "$SAMPLES")
+
+# guard: array range longer than the sample list, or --array not passed
+if [ -z "$sample" ]; then
+    echo "Error: no sample at index ${SLURM_ARRAY_TASK_ID} in $SAMPLES"
+    exit 1
+fi
 
 # define input and output filenames and paths
 in_bam="aligned/${sample}.sorted.bam"
