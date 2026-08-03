@@ -7,7 +7,8 @@
 # =============================================================================
 
 # ---- PATHS (edit these) -----------------------------------------------------
-out_dir <- "../model_data/"
+model_ver <- "gravity_v2"
+out_dir <- paste0("../model_data/", model_ver, "/")
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
 # ---- Libraries --------------------------------------------------------------

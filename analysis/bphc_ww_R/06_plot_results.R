@@ -12,8 +12,9 @@
 # =============================================================================
 
 # ---- PATHS (edit these) -----------------------------------------------------
-out_dir <- "../model_data/"
-fig_dir <- "../draft_figures/"
+model_ver <- "gravity_v2"
+out_dir <- paste0("../model_data/", model_ver, "/")
+fig_dir <- paste0("../draft_figures/", model_ver, "/")
 dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)
 
 # ---- Libraries --------------------------------------------------------------

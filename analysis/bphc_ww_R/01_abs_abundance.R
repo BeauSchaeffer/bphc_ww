@@ -7,7 +7,8 @@
 
 # ---- PATHS ------------------------------------------------------------------
 data_dir <- "../data/"        # raw inputs
-out_dir  <- "../model_data/"  # intermediate objects
+model_ver <- "gravity_v2"
+out_dir  <- paste0("../model_data/", model_ver, "/")
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
 # Lineages to pool, in chronological order (defines the L index in 02).

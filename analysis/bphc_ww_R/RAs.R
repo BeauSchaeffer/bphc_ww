@@ -290,6 +290,28 @@ ww_collapsed_complete <- ww_collapsed |>
          year_epiweek = as.numeric(as.character(time))) |>
   left_join(conc_wts, by = c("LOCATION", "year_epiweek"))
 
+# Coverage QC. Applied AFTER the conc_wts join and encoded as NA, not 0:
+# meaneffCopiesL comes from PCR and is independent of sequencing success, so a
+# QC failure left with a valid concentration would read downstream as "lineage
+# confidently absent" rather than "not measured".
+qc_breadth_col <- "spike_breadth_d200"
+qc_breadth_min <- 0.4
+
+seq_ok <- ww_metadata |>
+  filter(.data[[qc_breadth_col]] >= qc_breadth_min) |>
+  distinct(LOCATION, year_epiweek) |>
+  mutate(seq_ok = TRUE)
+
+ww_collapsed_complete <- ww_collapsed_complete |>
+  left_join(seq_ok, by = c("LOCATION", "year_epiweek")) |>
+  mutate(seq_ok = coalesce(seq_ok, FALSE),
+         meaneffCopiesL = if_else(seq_ok, meaneffCopiesL, NA_real_))
+
+cat("QC:", qc_breadth_col, ">=", qc_breadth_min, "|",
+    nrow(distinct(seq_ok, LOCATION, year_epiweek)), "of",
+    nrow(distinct(ww_metadata, LOCATION, year_epiweek)),
+    "sequenced neighborhood-weeks retained\n")
+
 write_rds(ww_collapsed_complete, "../data/ww_collapsed_complete.rds")
 
 # stable lineage order for all plots
@@ -446,24 +468,25 @@ plots_by_location <- setNames(
       filter(LOCATION == loc) |>
       ggplot(aes(x = time, y = abundance, fill = sublin_collapse)) +
       geom_col() +
-      geom_col(
-        data = qc_flags_nb |> filter(low_spike_qc, LOCATION == loc),
-        aes(x = time, y = 1),
-        fill = "grey40", alpha = 1,
-        inherit.aes = FALSE
-      ) +
-      geom_point(
-        data = conc_label |>
-          filter(LOCATION == loc) |>
-          mutate(time = factor(time, levels = year_epiweek_levels)),
-        aes(x = time, y = 1.03, color = conc_quartile),
-        inherit.aes = FALSE,
-        size = 1.2
-      ) +
-      scale_color_manual(
-        values = c("Q1" = "#2C7BB6", "Q2" = "#ABD9E9", "Q3" = "#FDAE61", "Q4" = "#D7191C"),
-        name = "PCR conc\nquartile"
-      ) +
+      # QC shading + PCR conc moved to RA_plots_qc/ (qc_filter_viz.R)
+      # geom_col(
+      #   data = qc_flags_nb |> filter(low_spike_qc, LOCATION == loc),
+      #   aes(x = time, y = 1),
+      #   fill = "grey40", alpha = 1,
+      #   inherit.aes = FALSE
+      # ) +
+      # geom_point(
+      #   data = conc_label |>
+      #     filter(LOCATION == loc) |>
+      #     mutate(time = factor(time, levels = year_epiweek_levels)),
+      #   aes(x = time, y = 1.03, color = conc_quartile),
+      #   inherit.aes = FALSE,
+      #   size = 1.2
+      # ) +
+      # scale_color_manual(
+      #   values = c("Q1" = "#2C7BB6", "Q2" = "#ABD9E9", "Q3" = "#FDAE61", "Q4" = "#D7191C"),
+      #   name = "PCR conc\nquartile"
+      # ) +
       scale_x_discrete(drop = FALSE) +
       scale_fill_manual(values = fill_cols, drop = FALSE) +
       geom_text(
@@ -481,7 +504,7 @@ plots_by_location <- setNames(
         axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
         legend.position = "right"
       ) +
-      guides(fill = "none", color = guide_legend(title = "PCR conc\nquartile"))
+      guides(fill = "none")
   }),
   locations
 )
@@ -510,26 +533,27 @@ plots_by_location_concwt <- setNames(
       filter(LOCATION == loc) |>
       ggplot(aes(x = time, y = abundance_LEwtd, fill = sublin_collapse)) +
       geom_col() +
-      geom_col(
-        data = qc_flags_nb |> filter(low_spike_qc, LOCATION == loc),
-        aes(x = time, y = Inf),
-        fill = "grey40", alpha = 1,
-        inherit.aes = FALSE
-      ) +
-      geom_point(
-        data = conc_label |>
-          filter(LOCATION == loc) |>
-          mutate(time = factor(time, levels = year_epiweek_levels)),
-        aes(x = time, color = conc_quartile),
-        y=Inf,
-        position = position_nudge(y = -0.5),
-        inherit.aes = FALSE,
-        size = 1.2
-      ) +
-      scale_color_manual(
-        values = c("Q1" = "#2C7BB6", "Q2" = "#ABD9E9", "Q3" = "#FDAE61", "Q4" = "#D7191C"),
-        name = "PCR conc\nquartile"
-      ) +
+      # QC shading + PCR conc moved to RA_plots_qc/ (qc_filter_viz.R)
+      # geom_col(
+      #   data = qc_flags_nb |> filter(low_spike_qc, LOCATION == loc),
+      #   aes(x = time, y = Inf),
+      #   fill = "grey40", alpha = 1,
+      #   inherit.aes = FALSE
+      # ) +
+      # geom_point(
+      #   data = conc_label |>
+      #     filter(LOCATION == loc) |>
+      #     mutate(time = factor(time, levels = year_epiweek_levels)),
+      #   aes(x = time, color = conc_quartile),
+      #   y=Inf,
+      #   position = position_nudge(y = -0.5),
+      #   inherit.aes = FALSE,
+      #   size = 1.2
+      # ) +
+      # scale_color_manual(
+      #   values = c("Q1" = "#2C7BB6", "Q2" = "#ABD9E9", "Q3" = "#FDAE61", "Q4" = "#D7191C"),
+      #   name = "PCR conc\nquartile"
+      # ) +
       scale_x_discrete(drop = FALSE) +
       scale_fill_manual(values = fill_cols, drop = FALSE) +
       geom_text(
@@ -547,7 +571,7 @@ plots_by_location_concwt <- setNames(
         axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
         legend.position = "right"
       ) +
-      guides(fill = "none", color = guide_legend(title = "PCR conc\nquartile"))
+      guides(fill = "none")
   }),
   locations
 )

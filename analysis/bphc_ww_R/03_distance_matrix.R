@@ -5,8 +5,10 @@
 # =============================================================================
 
 # ---- PATHS / PARAMS (edit these) --------------------------------------------
-out_dir  <- "../model_data/"
-shp_path <- paste0(out_dir, "bphc_genomic_sites/genomic_sites.shp")      # EDIT
+model_ver   <- "gravity_v2"
+out_dir     <- paste0("../model_data/", model_ver, "/")
+shared_dir  <- "../model_data/"   # shapefiles, shared across versions
+shp_path    <- paste0(shared_dir, "bphc_genomic_sites/genomic_sites.shp")   # EDIT
 pop_path <- "../data/pop_wts.rds"             # EDIT
 proj_crs <- 26986       # NAD83 / Mass Mainland (meters); correct for Boston
 

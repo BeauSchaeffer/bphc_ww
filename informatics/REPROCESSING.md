@@ -119,39 +119,33 @@ surfaces downstream as degraded coverage rather than an error.
 The common case -- e.g. rerunning `04.1_coverage_qc.sh` after changing `FLOORS`.
 Nothing upstream is reprocessed.
 
-Because existing outputs cover fewer samples than `ids.txt`, build a list scoped
-to the inputs that actually exist:
+**Just use `ids.txt`.** One list per batch, every step.
 
 ```bash
 cd $STORE/bphc_ww/baseload_batch2_outputs
-
-# samples that have the input this step needs
-ls freyja_variants/*_depths.tsv | xargs -n1 basename | sed 's/_depths\.tsv$//' | sort > /tmp/have_depths.txt
-comm -12 <(sort ids.txt) /tmp/have_depths.txt > ids_step.txt
-wc -l ids_step.txt        # expect 685 for batch 2, 305 for batch 1
+sbatch --array=0-$(($(wc -l < ids.txt)-1)) $REPO/informatics/scripts/04.1_coverage_qc.sh
 ```
 
-Then point the step at it with `--export`. `SAMPLES` defaults to `ids.txt` but any
-value in the environment wins:
+Then the same from `baseload_batch1_outputs`. Do **both batches** before syncing,
+or `data_clean.R` will reject the mismatched schemas.
+
+`ids.txt` lists every sample with metadata and raw reads (316 / 690), which is
+more than currently have intermediate outputs (305 / 685). The extra samples fail
+cleanly -- `04.1` checks for its input file and exits 1 with "depth file not
+found", writing nothing. Those failures are a useful standing reminder that 11
+batch-1 and 5 batch-2 samples were never processed (see `notebook.md`).
+
+If you ever do need to scope a step to a subset, pass the list through the
+environment rather than renaming `ids.txt`:
 
 ```bash
-for b in 1 2; do
-  d=$STORE/bphc_ww/baseload_batch${b}_outputs
-  sbatch --chdir=$d --export=ALL,SAMPLES=ids_step.txt \
-         --array=0-$(($(wc -l < $d/ids_step.txt)-1)) \
-         $REPO/informatics/scripts/04.1_coverage_qc.sh
-done
+sbatch --export=ALL,SAMPLES=my_subset.txt --array=0-$(($(wc -l < my_subset.txt)-1)) \
+       $REPO/informatics/scripts/04.1_coverage_qc.sh
 ```
 
-**Never swap `ids.txt` in place while an array is queued.** Each task reads the
-file when *it* starts, not when the array is submitted, so renaming the file
-mid-drain feeds the wrong list to later tasks. `--export` avoids the problem
-entirely. Keep `ALL` so the conda environment still propagates.
-
-Running against the full `ids.txt` instead is *safe but noisy* -- samples without
-inputs fail loudly with "depth file not found" and write nothing.
-
-Do this for **both batches** before syncing.
+**Never swap `ids.txt` in place while an array is queued** -- each task reads the
+file when *it* starts, not at submit, so renaming mid-drain feeds later tasks the
+wrong list. Keep `ALL` in `--export` so the conda environment still propagates.
 
 # Scenario B: process samples that were never processed
 
