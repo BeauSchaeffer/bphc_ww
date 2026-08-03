@@ -51,17 +51,38 @@ outputs cover fewer samples than `ids.txt`.
 ```bash
 STORE=/n/holylfs05/LABS/hanage_lab/Lab/hsphfs1/bschaeffer
 REPO=$STORE/bphc_ww_repo
+D=$STORE/bphc_ww/baseload_batch2_outputs
 
-cd $STORE/bphc_ww/baseload_batch2_outputs
-sbatch --array=0-$(($(wc -l < ids.txt)-1)) $REPO/informatics/scripts/04_freyja_variants.sh
+sbatch --chdir=$D --array=0-$(($(wc -l < $D/ids.txt)-1)) \
+       $REPO/informatics/scripts/04_freyja_variants.sh
 ```
+
+**Pass `--chdir` explicitly.** Outputs are written relative to the job's working
+directory, so the directory *is* the batch selector. Naming it on the command
+line beats relying on where your shell happens to be -- a wrong CWD silently
+writes one batch's results into the other's directory, with no error.
 
 Always pass `--array`, computed from whichever list you're running. It overrides
 the `#SBATCH --array=0-0` fallback, so the range can never go stale. If you
 forget, you get a single task rather than a wrong-sized run. Each script also
 aborts with a clear error if its index falls past the end of the list.
 
-`06_freyja_aggregate.sh` is a single job -- submit with no `--array`.
+**Steps 1-5 must be run once per batch.** They are separate submissions against
+separate directories -- there is no "both batches" invocation. A loop over
+`b in 1 2` with `--chdir` is the safe idiom:
+
+```bash
+for b in 1 2; do
+  d=$STORE/bphc_ww/baseload_batch${b}_outputs
+  sbatch --chdir=$d --array=0-$(($(wc -l < $d/ids.txt)-1)) \
+         $REPO/informatics/scripts/04.1_coverage_qc.sh
+done
+```
+
+Step 3 is the exception -- it takes a different script per batch, so it can't be
+looped this way.
+
+`06_freyja_aggregate.sh` is a single job -- submit with `--chdir` and no `--array`.
 
 ## Pipeline order
 
@@ -114,9 +135,12 @@ Then point the step at it with `--export`. `SAMPLES` defaults to `ids.txt` but a
 value in the environment wins:
 
 ```bash
-sbatch --export=ALL,SAMPLES=ids_step.txt \
-       --array=0-$(($(wc -l < ids_step.txt)-1)) \
-       $REPO/informatics/scripts/04.1_coverage_qc.sh
+for b in 1 2; do
+  d=$STORE/bphc_ww/baseload_batch${b}_outputs
+  sbatch --chdir=$d --export=ALL,SAMPLES=ids_step.txt \
+         --array=0-$(($(wc -l < $d/ids_step.txt)-1)) \
+         $REPO/informatics/scripts/04.1_coverage_qc.sh
+done
 ```
 
 **Never swap `ids.txt` in place while an array is queued.** Each task reads the
@@ -143,8 +167,10 @@ ls freyja_demix/*_demix.tsv 2>/dev/null | xargs -n1 basename | sed 's/_demix\.ts
 comm -23 <(sort ids.txt) /tmp/done.txt > ids_new.txt
 wc -l ids_new.txt
 
-N=$(($(wc -l < ids_new.txt)-1))
-sbatch --export=ALL,SAMPLES=ids_new.txt --array=0-$N $REPO/informatics/scripts/01_fastp_trim.sh
+D=$STORE/bphc_ww/baseload_batch1_outputs
+N=$(($(wc -l < $D/ids_new.txt)-1))
+sbatch --chdir=$D --export=ALL,SAMPLES=ids_new.txt --array=0-$N \
+       $REPO/informatics/scripts/01_fastp_trim.sh
 # ...then 02, 03_ivar_trim_V4.1, 04, 04.1, 05 the same way
 ```
 
