@@ -76,17 +76,17 @@ sublin_meta <- left_join(sublineages.final, ww_metadata, by=c("Sample"="FASTQ_ID
 # sublin_meta$spike_breadth_d10 |> hist()
 # sublin_meta$breadth_d10 |> hist()
 
-### Apply QC filters at this stage
-
-# sublin_meta <- sublin_meta |>
-#   filter(spike_breadth_d10 >= 0.75)
-
+### Coverage QC. One definition, used both for the analysis mask applied to
+### ww_collapsed_complete below and for the grey overlay on the RA figures, so
+### the shaded weeks are exactly the weeks the model drops.
+qc_breadth_col <- "spike_breadth_d200"
+qc_breadth_min <- 0.4
 
 qc_flags_nb <- ww_metadata |>
-  mutate(time = as.character(year_epiweek),
-         low_spike_qc = spike_breadth_d10 <= 0.5 | is.na(spike_breadth_d10)) |>
+  mutate(time = as.character(year_epiweek)) |>
   group_by(LOCATION, time) |>
-  summarise(low_spike_qc = any(low_spike_qc), .groups = "drop")
+  summarise(low_spike_qc = !any(.data[[qc_breadth_col]] >= qc_breadth_min, na.rm = TRUE),
+            .groups = "drop")
 
 qc_flags_nb <- qc_flags_nb |> filter(time %in% sublin_meta$year_epiweek)
 
@@ -294,9 +294,6 @@ ww_collapsed_complete <- ww_collapsed |>
 # meaneffCopiesL comes from PCR and is independent of sequencing success, so a
 # QC failure left with a valid concentration would read downstream as "lineage
 # confidently absent" rather than "not measured".
-qc_breadth_col <- "spike_breadth_d200"
-qc_breadth_min <- 0.4
-
 seq_ok <- ww_metadata |>
   filter(.data[[qc_breadth_col]] >= qc_breadth_min) |>
   distinct(LOCATION, year_epiweek) |>

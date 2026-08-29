@@ -15,6 +15,15 @@ samples_original.txt
 bad_samples.txt
 informatics/testing.md
 
+# plots, wherever they land (incl. a stray Rplots.pdf from a bare plot print)
+*.jpg
+*.jpeg
+*.png
+*.pdf
+*.svg
+*.tif
+*.tiff
+
 # system & temp files
 *.log
 *.out
@@ -61,6 +70,7 @@ analysis/bphc_ww_R/gravity_model
 
 # notes
 informatics/notebook.md
+methods_notes.md
 samples_original.txt
 samples_clean.txt
 bad_samples.txt
