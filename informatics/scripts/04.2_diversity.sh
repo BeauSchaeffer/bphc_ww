@@ -184,7 +184,7 @@ END {
               "\tn_callable_" rname[i]
     print h
 
-    r = sample "\t" L+0 "\t" nvar+0 "\t" ncall+0 "\t" af "\t" dfloor
+    r = sample "\t" glen+0 "\t" nvar+0 "\t" ncall+0 "\t" af "\t" dfloor
     r = r "\t" win "\t" step "\t" nwf+0 "\t" nwc+0
     r = r "\t" fmt(pi_ww_fixed) "\t" fmt(pi_ww_call)
     r = r "\t" fmt(h_ww_fixed)  "\t" fmt(h_ww_call)
