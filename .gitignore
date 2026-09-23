@@ -25,6 +25,7 @@ informatics/testing.md
 *.tiff
 
 # system & temp files
+__pycache__/
 *.log
 *.out
 *.err
@@ -72,12 +73,18 @@ analysis/bphc_ww_R/gravity_model
 informatics/notebook.md
 informatics/REPROCESSING.md
 methods_notes.md
+litrev.md
+manuscript_outline.md
 samples_original.txt
 samples_clean.txt
 bad_samples.txt
 
 # local-only, untracked
 CLAUDE.md
+
+# lit search tooling (local MCP server + its config)
+tools/
+.mcp.json
 
 # RETAIN select files
 !informatics/scripts/

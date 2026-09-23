@@ -125,6 +125,16 @@ ww_group   <- ww_monthly_composition(sublin_meta, group)
 clin_fine  <- clin_monthly_composition(clin_lin, sublineage)
 clin_group <- clin_monthly_composition(clin_lin, group)
 
+# per-neighborhood WW compositions, compared against the same citywide clinical
+# sets below -- the clinical source is state-level, so there is no
+# neighborhood-resolved clinical reference to compare against
+ww_fine_nb  <- ww_monthly_composition_by_loc(sublin_meta, sublineage)
+ww_group_nb <- ww_monthly_composition_by_loc(sublin_meta, group)
+
+ww_n_samples_nb <- sublin_meta |>
+  distinct(LOCATION, month, Sample) |>
+  count(LOCATION, month, name = "n_ww_samples")
+
 # ---- 4. Panels ----------------------------------------------------------------
 
 run_panel <- function(ww_comp, clin_comp, tag) {
@@ -148,6 +158,37 @@ run_panel <- function(ww_comp, clin_comp, tag) {
   jm
 }
 
+# per-neighborhood: same metric, same clinical sets, one neighborhood at a time.
+# The monthly threshold (min05 panel) is applied within neighborhood-month by
+# the caller, so "0.05 of the composition" means that neighborhood's own.
+run_panel_nb <- function(ww_comp_nb, clin_comp, tag) {
+  clin_sets <- sets_from_comp(clin_comp)
+
+  jm <- ww_comp_nb |>
+    group_split(LOCATION) |>
+    map_dfr(function(d) {
+      loc <- unique(d$LOCATION)
+      jaccard_over_time(
+        sets_from_comp(d |> select(-LOCATION)),
+        clin_sets,
+        ww_n_samples_nb |> filter(LOCATION == loc) |> select(month, n_ww_samples),
+        clin_n_samples
+      ) |>
+        mutate(LOCATION = loc, .before = 1)
+    })
+
+  write_rds(jm, paste0(out_dir, "jaccard_monthly_nb_", tag, ".rds"))
+
+  cat(sprintf("[%s/%s] per-neighborhood median Jaccard (vs. citywide clinical):\n", concord_ver, tag))
+  jm |>
+    group_by(LOCATION) |>
+    summarise(months = sum(!is.na(jaccard)), med = median(jaccard, na.rm = TRUE), .groups = "drop") |>
+    arrange(desc(med)) |>
+    pwalk(function(LOCATION, months, med) cat(sprintf("    %-24s %2d months  %.3f\n", LOCATION, months, med)))
+
+  jm
+}
+
 # A. full lineage resolution, everything present
 jaccard_monthly_fine <- run_panel(ww_fine, clin_fine, "fine")
 
@@ -157,6 +198,19 @@ jaccard_monthly_all <- run_panel(ww_group, clin_group, "all")
 # C. parent-group resolution, >= monthly_min_prop that month (symmetric)
 jaccard_monthly_min05 <- run_panel(
   apply_monthly_threshold(ww_group,   monthly_min_prop),
+  apply_monthly_threshold(clin_group, monthly_min_prop),
+  "min05"
+)
+
+# ---- 5. Same three panels, per neighborhood ----------------------------------
+
+jaccard_monthly_nb_fine  <- run_panel_nb(ww_fine_nb,  clin_fine,  "fine")
+jaccard_monthly_nb_all   <- run_panel_nb(ww_group_nb, clin_group, "all")
+jaccard_monthly_nb_min05 <- run_panel_nb(
+  ww_group_nb |>
+    group_split(LOCATION) |>
+    map_dfr(~ apply_monthly_threshold(.x |> select(-LOCATION), monthly_min_prop) |>
+              mutate(LOCATION = unique(.x$LOCATION), .before = 1)),
   apply_monthly_threshold(clin_group, monthly_min_prop),
   "min05"
 )

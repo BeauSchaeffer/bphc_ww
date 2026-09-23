@@ -136,6 +136,13 @@ ww_group   <- ww_monthly_composition(sublin_meta, group,      ww_pop_weighted, p
 clin_fine  <- clin_monthly_composition(clin_lin, sublineage)
 clin_group <- clin_monthly_composition(clin_lin, group)
 
+# per-neighborhood WW compositions, compared against the same citywide clinical
+# composition below -- the clinical source is state-level, so there is no
+# neighborhood-resolved clinical reference to compare against. ww_pop_weighted
+# does not apply here: a single neighborhood is its own unit.
+ww_fine_nb  <- ww_monthly_composition_by_loc(sublin_meta, sublineage)
+ww_group_nb <- ww_monthly_composition_by_loc(sublin_meta, group)
+
 # ---- 4. Panels ----------------------------------------------------------------
 
 # study-period summaries, pooled across all months. The min05 panel applies the
@@ -147,6 +154,34 @@ pooled_clin <- function(df, col) { v <- df |> count({{ col }}) |> deframe(); v /
 pool_threshold <- function(v, min_prop) {
   keep <- v >= min_prop
   c(v[keep], other = sum(v[!keep]))
+}
+
+# per-neighborhood: same metric, same clinical composition, one neighborhood at
+# a time. No study-period pooled summary -- the per-neighborhood story is the
+# monthly series, and pooling 1-5 samples/month over 22 months would read as a
+# citywide-strength estimate.
+run_panel_nb <- function(ww_comp_nb, clin_comp, tag) {
+  clin_vec <- comp_to_vectors(clin_comp)
+
+  bm <- ww_comp_nb |>
+    group_split(LOCATION) |>
+    map_dfr(function(d) {
+      loc <- unique(d$LOCATION)
+      bc_over_time(comp_to_vectors(d |> select(-LOCATION)), clin_vec) |>
+        mutate(LOCATION = loc, .before = 1)
+    })
+
+  write_rds(bm, paste0(out_dir, "bc_monthly_nb_", tag, ".rds"))
+
+  cat(sprintf("[%s/%s] per-neighborhood median BC similarity (vs. citywide clinical):\n", concord_ver, tag))
+  bm |>
+    group_by(LOCATION) |>
+    summarise(months = sum(!is.na(bc_similarity)),
+              med = median(bc_similarity, na.rm = TRUE), .groups = "drop") |>
+    arrange(desc(med)) |>
+    pwalk(function(LOCATION, months, med) cat(sprintf("    %-24s %2d months  %.3f\n", LOCATION, months, med)))
+
+  bm
 }
 
 run_panel <- function(ww_comp, clin_comp, overall_ww, overall_clin, tag) {
@@ -183,4 +218,18 @@ bc_monthly_min05 <- run_panel(
   apply_monthly_threshold(clin_group, monthly_min_prop, other_label = "other"),
   pool_threshold(pooled_ww(sublin_meta, group), monthly_min_prop),
   pool_threshold(pooled_clin(clin_lin, group), monthly_min_prop), "min05"
+)
+
+# ---- 5. Same three panels, per neighborhood ----------------------------------
+
+bc_monthly_nb_fine  <- run_panel_nb(ww_fine_nb,  clin_fine,  "fine")
+bc_monthly_nb_all   <- run_panel_nb(ww_group_nb, clin_group, "all")
+bc_monthly_nb_min05 <- run_panel_nb(
+  ww_group_nb |>
+    group_split(LOCATION) |>
+    map_dfr(~ apply_monthly_threshold(.x |> select(-LOCATION), monthly_min_prop,
+                                      other_label = "other") |>
+              mutate(LOCATION = unique(.x$LOCATION), .before = 1)),
+  apply_monthly_threshold(clin_group, monthly_min_prop, other_label = "other"),
+  "min05"
 )

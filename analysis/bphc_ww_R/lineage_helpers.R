@@ -172,3 +172,24 @@ apply_monthly_threshold <- function(comp, min_prop, other_label = NULL) {
       select(month, lineage, proportion, n_samples)
   }
 }
+
+### fx - per-neighborhood monthly WW composition -> long (LOCATION, month, lineage, proportion, n_samples)
+# Same abundance sums as ww_monthly_composition(), but the denominator is that
+# neighborhood-month's own sample count, so each unit is its own composition.
+# Note the depth asymmetry against the citywide version: a neighborhood-month
+# rests on 1-5 samples, so its lineage richness is structurally lower.
+
+ww_monthly_composition_by_loc <- function(df, lineage_col) {
+  df <- df |> rename(lineage = {{ lineage_col }})
+
+  n_samples_loc <- df |>
+    distinct(LOCATION, month, Sample) |>
+    count(LOCATION, month, name = "n_samples")
+
+  df |>
+    group_by(LOCATION, month, lineage) |>
+    summarise(abund_sum = sum(abundance, na.rm = TRUE), .groups = "drop") |>
+    left_join(n_samples_loc, by = c("LOCATION", "month")) |>
+    mutate(proportion = abund_sum / n_samples) |>
+    select(LOCATION, month, lineage, proportion, n_samples)
+}
